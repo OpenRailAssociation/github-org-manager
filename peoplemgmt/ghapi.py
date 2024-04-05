@@ -16,7 +16,7 @@ def get_github_token() -> str:
         token = get_app_config("GITHUB_TOKEN")
     else:
         sys.exit(
-            "No token set for GitHub authentication! Set it in config/config.yaml "
+            "No token set for GitHub authentication! Set it in config/app_config.yaml "
             "or via environment variable GITHUB_TOKEN"
         )
 

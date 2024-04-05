@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "people-management"
+name = "github-team-manager"
 version = "0.1.0"
 description = ""
 authors = ["Max Mehl <max.mehl@deutschebahn.com>"]
 readme = "README.md"
-packages = [{include = "peoplemgmt"}]
+packages = [{include = "gh_team_mgr"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -25,4 +25,4 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.scripts]
-configure-teams = 'peoplemgmt.configure_teams:main'
+configure-teams = 'gh_team_mgr.configure_teams:main'

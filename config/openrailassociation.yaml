@@ -1,141 +1,144 @@
 teams:
   OSRD:
-    Admins:
-    Maintainers:
-      DevOps:
-      Core:
-      Editoast:
-      Front:
-      Tests:
-      Physics:
+    OSRD Admins:
+    OSRD Maintainers:
+      OSRD Maintainers DevOps:
+      OSRD Maintainers Core:
+      OSRD Maintainers Editoast:
+      OSRD Maintainers Front:
+      OSRD Maintainers Tests:
+      OSRD Maintainers Physics:
 
 members:
-  achrafmohye:
+  mmthrowawayacc:
     teams:
-      -
-  Akctarus:
-    teams:
-      -
-  anisometropie:
-    teams:
-      -
-  axrolld:
-    teams:
-      -
-  bgiuliana:
-    teams:
-      -
-  bloussou:
-    teams:
-      -
-  bougue-pe:
-    teams:
-      -
-  Caracol3:
-    teams:
-      -
-  cassandrafestoc:
-    teams:
-      -
-  Castavo:
-    teams:
-      -
-  clarani:
-    teams:
-      -
-  eckter:
-    teams:
-      -
-  ElysaSrc:
-    teams:
-      -
-  Erashin:
-    teams:
-      -
-  estia-m:
-    teams:
-      -
-  flomonster:
-    teams:
-      -
-  hamz2a:
-    teams:
-      -
-  jacomyal:
-    teams:
-      -
-  Khoyo:
-    teams:
-      -
-  kmer2016:
-    teams:
-      -
-  leovalais:
-    teams:
-      -
-  loic-hamelin:
-    teams:
-      -
-  louisgreiner:
-    teams:
-      -
-  maelysLeratRosso:
-    teams:
-      -
-  manalzidani:
-    teams:
-      -
-  Math-R:
-    teams:
-      -
-  Maymanaf:
-    teams:
-      -
-  Morgane-SJK:
-    teams:
-      -
-  multun:
-    teams:
-      -
-  nicolaswurtz:
-    teams:
-      -
-  Omar-938:
-    teams:
-      -
-  SarahBellaha:
-    teams:
-      -
-  SharglutDev:
-    teams:
-      -
-  shenriotpro:
-    teams:
-      -
-  sim51:
-    teams:
-      -
-  SimonPierreED:
-    teams:
-      -
-  Tguisnet:
-    teams:
-      -
-  Tristramg:
-    teams:
-      -
-  Uriel-Sautron:
-    teams:
-      -
-  Wadjetz:
-    teams:
-      -
-  woshilapin:
-    teams:
-      -
-  Yohh:
-    teams:
-      -
-  younesschrifi:
-    teams:
-      -
+      - OSRD Maintainers DevOps
+  # achrafmohye:
+  #   teams:
+  #     -
+  # Akctarus:
+  #   teams:
+  #     -
+  # anisometropie:
+  #   teams:
+  #     -
+  # axrolld:
+  #   teams:
+  #     -
+  # bgiuliana:
+  #   teams:
+  #     -
+  # bloussou:
+  #   teams:
+  #     -
+  # bougue-pe:
+  #   teams:
+  #     -
+  # Caracol3:
+  #   teams:
+  #     -
+  # cassandrafestoc:
+  #   teams:
+  #     -
+  # Castavo:
+  #   teams:
+  #     -
+  # clarani:
+  #   teams:
+  #     -
+  # eckter:
+  #   teams:
+  #     -
+  # ElysaSrc:
+  #   teams:
+  #     -
+  # Erashin:
+  #   teams:
+  #     -
+  # estia-m:
+  #   teams:
+  #     -
+  # flomonster:
+  #   teams:
+  #     -
+  # hamz2a:
+  #   teams:
+  #     -
+  # jacomyal:
+  #   teams:
+  #     -
+  # Khoyo:
+  #   teams:
+  #     -
+  # kmer2016:
+  #   teams:
+  #     -
+  # leovalais:
+  #   teams:
+  #     -
+  # loic-hamelin:
+  #   teams:
+  #     -
+  # louisgreiner:
+  #   teams:
+  #     -
+  # maelysLeratRosso:
+  #   teams:
+  #     -
+  # manalzidani:
+  #   teams:
+  #     -
+  # Math-R:
+  #   teams:
+  #     -
+  # Maymanaf:
+  #   teams:
+  #     -
+  # Morgane-SJK:
+  #   teams:
+  #     -
+  # multun:
+  #   teams:
+  #     -
+  # nicolaswurtz:
+  #   teams:
+  #     -
+  # Omar-938:
+  #   teams:
+  #     -
+  # SarahBellaha:
+  #   teams:
+  #     -
+  # SharglutDev:
+  #   teams:
+  #     -
+  # shenriotpro:
+  #   teams:
+  #     -
+  # sim51:
+  #   teams:
+  #     -
+  # SimonPierreED:
+  #   teams:
+  #     -
+  # Tguisnet:
+  #   teams:
+  #     -
+  # Tristramg:
+  #   teams:
+  #     -
+  # Uriel-Sautron:
+  #   teams:
+  #     -
+  # Wadjetz:
+  #   teams:
+  #     -
+  # woshilapin:
+  #   teams:
+  #     -
+  # Yohh:
+  #   teams:
+  #     -
+  # younesschrifi:
+  #   teams:
+  #     -

@@ -1,4 +1,26 @@
 teams:
+  # ----------------------------------------------------------------------------
+  # General OpenRail teams
+  # ----------------------------------------------------------------------------
+  Technical Committee:
+    members:
+      - cornelius
+      - mxmehl
+      - loic-hamelin
+      - Keller-Peter
+
+  OpenRail Team:
+    members:
+      - cornelius
+      - mxmehl
+      - SimonClavier
+      - loic-hamelin
+      - Keller-Peter
+      - MahaliaStephan
+      - vlasceanuic
+  # ----------------------------------------------------------------------------
+  # OSRD - Open Source Railway Designer
+  # ----------------------------------------------------------------------------
   OSRD:
     members:
       - loic-hamelin
@@ -23,10 +45,3 @@ teams:
     parent: OSRD Maintainers
   OSRD Maintainers Physics:
     parent: OSRD Maintainers
-  Technical Committee:
-    parent: null
-    members:
-      - cornelius
-      - mxmehl
-      - loic-hamelin
-      - Keller-Peter

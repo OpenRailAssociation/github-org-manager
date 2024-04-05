@@ -1,9 +1,12 @@
 """Global init file"""
 
 import logging
+from importlib.metadata import version
+
+__version__ = version("github-team-manager")
 
 
-def configure_logger() -> logging.Logger:
+def configure_logger(debug: bool = False) -> logging.Logger:
     """Set logging options"""
     log = logging.getLogger()
     logging.basicConfig(
@@ -11,6 +14,9 @@ def configure_logger() -> logging.Logger:
         format="[%(asctime)s] %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    log.setLevel(logging.DEBUG)
+    if debug:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
 
     return log

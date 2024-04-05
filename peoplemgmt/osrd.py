@@ -1,12 +1,13 @@
 """Manage people in GitHub Organization"""
 
+import logging
 from dataclasses import dataclass, field
 
 from github import Github
 
-from .ghapi import get_github_token
-
+from . import configure_logger
 from .config import get_config
+from .ghapi import get_github_token
 
 ORG = "OpenRailAssociation"
 
@@ -57,6 +58,9 @@ class GHorg:
 
     def get_current_teams(self):
         """Get teams of the existing organisation"""
+        # Reset team list as we call this function more than once
+        self.current_teams = []
+
         for team in self.org.get_teams():
             self.current_teams.append(team)
 
@@ -73,13 +77,38 @@ class GHorg:
 
         extract_teams_and_children(teams)
 
+    def create_missing_teams(self):
+        """Find out which teams are configured but not part of the org yet"""
+
+        # Get list of current and configured teams
+        self.get_current_teams()
+        self.read_configured_teams()
+
+        # Get the names of the existing teams
+        existent_team_names = [team.name for team in self.current_teams]
+
+        for team, attributes in self.configured_teams.items():
+            if team not in existent_team_names:
+                if parent := attributes.get("parent"):
+                    # slugify the name
+                    # TODO: this is very naive, no other special chars are
+                    # supported, or multiple spaces etc.
+                    parent: str = parent.replace(" ", "-")
+                    parent_id = self.org.get_team_by_slug(parent).id
+
+                logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
+                self.org.create_team(team, parent_team_id=parent_id)
+
+        # Re-scan current teams as new ones may have been created
+        self.get_current_teams()
+
 
 def main():
     """Main function"""
+    configure_logger()
     org = GHorg()
     org.login(ORG)
     org.compare_memberlists()
-    org.get_current_teams()
-    org.read_configured_teams()
+    org.create_missing_teams()
 
     print(org)

@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass, field
 
 from github import Github, NamedUser, Organization, Team, UnknownObjectException
+from tqdm import tqdm
 
 from ._config import get_config
 from ._gh_api import get_github_token
@@ -88,8 +89,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def sync_teams_members(self):
         """Check the configured members of each team, add missing ones and delete unconfigured"""
-        for team in self.current_teams:
+        for team in (pbar := tqdm(self.current_teams, desc="Teams synced")):
             logging.debug("Starting to handle team '%s'", team)
+            pbar.set_postfix_str(f"Now: {team.name}")
 
             # Handle the team not being configured locally
             if team.name not in self.configured_teams:

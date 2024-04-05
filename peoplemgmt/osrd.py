@@ -16,8 +16,8 @@ ORG = "OpenRailAssociation"
 class GHorg:  # pylint: disable=too-many-instance-attributes
     """Dataclass holding GH organization data and functions"""
 
-    gh: Github = None
-    org: Organization.Organization = None
+    gh: Github = None  # type: ignore
+    org: Organization.Organization = None  # type: ignore
     current_members: list[NamedUser.NamedUser] = field(default_factory=list)
     configured_members: dict[str, dict] = field(default_factory=dict)
     missing_members_at_github: dict[str, dict] = field(default_factory=dict)
@@ -65,7 +65,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         for team, attributes in self.configured_teams.items():
             if team not in existent_team_names:
-                if parent := attributes.get("parent"):
+                if parent := attributes.get("parent"):  # type: ignore
                     parent_id = self.org.get_team_by_slug(self._sluggify_teamname(parent)).id
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
@@ -91,70 +91,47 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def sync_teams_members(self):
         """Check the configured members of each team, add missing ones and delete unconfigured"""
-        # TODO: Make a Team sub-dataclass of this
         for team in self.current_teams:
-            print()
-            print(team)
+            logging.debug("Starting to handle team '%s'", team)
 
             # Handle the team not being configured locally
             if team.name not in self.configured_teams:
-                logging.warning("Team '%s' does not seem to be configured locally", team.name)
+                logging.warning(
+                    "Team '%s' does not seem to be configured locally. "
+                    "Taking no action about this team at all",
+                    team.name,
+                )
                 continue
 
             # Get locally configured team members
             local_team = self.configured_teams.get(team.name)
 
-            if not isinstance(local_team, dict) or not local_team.get('members'):
+            if not isinstance(local_team, dict) or not local_team.get("members"):
                 logging.debug("Team '%s' has no configured members", team.name)
                 configured_team_members = []
             else:
                 configured_team_members = [
-                    self.gh.get_user(user) for user in local_team.get("members")
+                    self.gh.get_user(user) for user in local_team.get("members")  # type: ignore
                 ]
 
-            # Get actual team members at GitHub
-            current_team_members = list(team.get_members())
+            # Get actual team members at GitHub. Problem: this also seems to
+            # include child team members
+            current_team_members = []
+            for member in list(team.get_members()):
+                if team.has_in_members(member):
+                    current_team_members.append(member)
 
-            print(f"Current members: {current_team_members}")
-            print(f"Configured members: {configured_team_members}")
+            # Add members who are not in GitHub team but should be
+            members_to_be_added = set(configured_team_members).difference(current_team_members)
+            for member in members_to_be_added:
+                logging.info("Adding member '%s' to team '%s'", member.login, team.name)
+                team.add_membership(member)  # type: ignore
 
-            # TODO: Delete users who are in team but shouldn't
-            # TODO: Add users who are not in team but should
-
-    # def compare_memberlists(self):
-    #     """Find out which members are configured but not part of the org yet"""
-
-    #     # Get list of current and configured members
-    #     self.get_current_members()
-    #     self.read_configured_members()
-
-    #     # Compare both lists in both ways
-    #     for member, config in self.configured_members.items():
-    #         if member not in self.current_members:
-    #             self.missing_members_at_github[member] = config
-    #     for member in self.current_members:
-    #         if member not in self.configured_members:
-    #             self.unconfigured_members.append(member)
-
-    # def invite_missing_members(self):
-    #     """Invite the missing members to the org and the configured teams"""
-
-    #     # Compare the memberlists
-    #     self.compare_memberlists()
-
-    #     for username, config in self.missing_members_at_github.items():
-    #         # Get team object for each desired team name
-    #         userobj = self.gh.get_user(username)
-    #         teamobjs = []
-    #         for team in filter(None, config.get("teams")):
-    #             teamobjs.append(self.org.get_team_by_slug(self._sluggify_teamname(team)))
-
-    #         logging.info(
-    #             "Inviting user '%s' to the following teams: %s",
-    #             username,
-    #             ", ".join(filter(None, config.get("teams"))),
-    #         )
-    #         self.org.invite_user(userobj, teams=teamobjs)
+            # Remove members from team as they are not configured locally
+            members_to_be_removed = set(current_team_members).difference(configured_team_members)
+            for member in members_to_be_removed:
+                logging.info("Removing member '%s' from team '%s'", member.login, team.name)
+                team.remove_membership(member)
 
 
 def main():
@@ -165,4 +142,4 @@ def main():
     org.create_missing_teams()
     org.sync_teams_members()
 
-    print(org)
+    logging.debug("Final dataclass: %s", org)

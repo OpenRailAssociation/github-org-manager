@@ -13,7 +13,7 @@ ORG = "OpenRailAssociation"
 
 
 @dataclass
-class GHorg:
+class GHorg:  # pylint: disable=too-many-instance-attributes
     """Dataclass holding GH organization data and functions"""
 
     gh = None
@@ -129,13 +129,13 @@ class GHorg:
             # Get team object for each desired team name
             userobj = self.gh.get_user(username)
             teamobjs = []
-            for team in config.get("teams"):
+            for team in filter(None, config.get("teams")):
                 teamobjs.append(self.org.get_team_by_slug(self._sluggify_teamname(team)))
 
             logging.info(
                 "Inviting user '%s' to the following teams: %s",
                 username,
-                ", ".join(config.get("teams")),
+                ", ".join(filter(None, config.get("teams"))),
             )
             self.org.invite_user(userobj, teams=teamobjs)
 

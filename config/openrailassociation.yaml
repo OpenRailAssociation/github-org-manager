@@ -23,6 +23,10 @@ teams:
     parent: OSRD Maintainers
   OSRD Maintainers Physics:
     parent: OSRD Maintainers
-  foobar:
+  Technical Committee:
+    parent: null
     members:
+      - cornelius
       - mxmehl
+      - loic-hamelin
+      - Keller-Peter

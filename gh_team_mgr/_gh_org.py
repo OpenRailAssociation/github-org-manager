@@ -3,7 +3,7 @@
 import logging
 from dataclasses import dataclass, field
 
-from github import Github, NamedUser, Organization, Team
+from github import Github, NamedUser, Organization, Team, UnknownObjectException
 
 from ._config import get_config
 from ._gh_api import get_github_token
@@ -107,9 +107,17 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 logging.debug("Team '%s' has no configured members", team.name)
                 configured_team_members = []
             else:
-                configured_team_members = [
-                    self.gh.get_user(user) for user in local_team.get("members")  # type: ignore
-                ]
+                try:
+                    configured_team_members = [
+                        self.gh.get_user(user) for user in local_team.get("members")  # type: ignore
+                    ]
+                except UnknownObjectException:
+                    logging.error(
+                        "At least one of the configured members of the team '%s' "
+                        "does not seem to exist. Check the spelling! Skipping this team",
+                        team.name,
+                    )
+                    continue
 
             # Get actual team members at GitHub. Problem: this also seems to
             # include child team members

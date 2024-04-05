@@ -6,11 +6,13 @@ authors = ["Max Mehl <max.mehl@deutschebahn.com>"]
 readme = "README.md"
 packages = [{include = "gh_team_mgr"}]
 
+[tool.poetry.scripts]
+configure-teams = 'gh_team_mgr.configure_teams:main'
+
 [tool.poetry.dependencies]
 python = "^3.10"
 pygithub = "^2.3.0"
 pyyaml = "^6.0.1"
-
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
@@ -24,5 +26,13 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 
-[tool.poetry.scripts]
-configure-teams = 'gh_team_mgr.configure_teams:main'
+# FORMATTING settings
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 100
+
+# MYPY settings
+[tool.mypy]
+files = ["gh_team_mgr/*.py"]

@@ -11,6 +11,6 @@ def configure_logger() -> logging.Logger:
         format="[%(asctime)s] %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    log.setLevel(logging.INFO)
+    log.setLevel(logging.DEBUG)
 
     return log

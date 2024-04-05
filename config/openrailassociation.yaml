@@ -4,6 +4,7 @@ teams:
     parent: OSRD
     members:
       - loic-hamelin
+      - mxmehl
   OSRD Maintainers:
     parent: OSRD
   OSRD Maintainers DevOps:

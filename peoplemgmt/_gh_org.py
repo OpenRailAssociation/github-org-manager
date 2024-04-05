@@ -1,15 +1,12 @@
-"""Manage people in GitHub Organization"""
+"""Class for the GitHub organization which contains most of the logic"""
 
 import logging
 from dataclasses import dataclass, field
 
 from github import Github, NamedUser, Organization, Team
 
-from . import configure_logger
-from .config import get_config
-from .ghapi import get_github_token
-
-ORG = "OpenRailAssociation"
+from ._config import get_config
+from ._gh_api import get_github_token
 
 
 @dataclass
@@ -132,14 +129,3 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             for member in members_to_be_removed:
                 logging.info("Removing member '%s' from team '%s'", member.login, team.name)
                 team.remove_membership(member)
-
-
-def main():
-    """Main function"""
-    configure_logger()
-    org = GHorg()
-    org.login(ORG)
-    org.create_missing_teams()
-    org.sync_teams_members()
-
-    logging.debug("Final dataclass: %s", org)

@@ -25,4 +25,4 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.scripts]
-osrd = 'peoplemgmt.osrd:main'
+configure-teams = 'peoplemgmt.configure_teams:main'

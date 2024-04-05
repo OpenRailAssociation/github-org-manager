@@ -5,7 +5,7 @@ Functions for interacting with the GitHub API
 import os
 import sys
 
-from .config import get_app_config
+from ._config import get_app_config
 
 
 def get_github_token() -> str:

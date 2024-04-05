@@ -1,5 +1,7 @@
 teams:
   OSRD:
+    members:
+      - loic-hamelin
   OSRD Admins:
     parent: OSRD
     members:
@@ -24,4 +26,3 @@ teams:
   foobar:
     members:
       - mxmehl
-      - mmthrowawayacc

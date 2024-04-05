@@ -1,146 +1,26 @@
 teams:
   OSRD:
-    OSRD Admins:
-    OSRD Maintainers:
-      OSRD Maintainers DevOps:
-      OSRD Maintainers Core:
-      OSRD Maintainers Editoast:
-      OSRD Maintainers Front:
-      OSRD Maintainers Tests:
-      OSRD Maintainers Physics:
+  OSRD Admins:
+    parent: OSRD
+    members:
+      - loic-hamelin
+  OSRD Maintainers:
+    parent: OSRD
+  OSRD Maintainers DevOps:
+    parent: OSRD Maintainers
+    members:
+      - mmthrowawayacc
+  OSRD Maintainers Core:
+    parent: OSRD Maintainers
+  OSRD Maintainers Editoast:
+    parent: OSRD Maintainers
+  OSRD Maintainers Front:
+    parent: OSRD Maintainers
+  OSRD Maintainers Tests:
+    parent: OSRD Maintainers
+  OSRD Maintainers Physics:
+    parent: OSRD Maintainers
   foobar:
-
-members:
-  mmthrowawayacc:
-    teams:
-      - OSRD Maintainers DevOps
-      - foobar
-  achrafmohye:
-    teams:
-      -
-  Akctarus:
-    teams:
-      -
-  anisometropie:
-    teams:
-      -
-  axrolld:
-    teams:
-      -
-  bgiuliana:
-    teams:
-      -
-  bloussou:
-    teams:
-      -
-  bougue-pe:
-    teams:
-      -
-  Caracol3:
-    teams:
-      -
-  cassandrafestoc:
-    teams:
-      -
-  Castavo:
-    teams:
-      -
-  clarani:
-    teams:
-      -
-  eckter:
-    teams:
-      -
-  ElysaSrc:
-    teams:
-      -
-  Erashin:
-    teams:
-      -
-  estia-m:
-    teams:
-      -
-  flomonster:
-    teams:
-      -
-  hamz2a:
-    teams:
-      -
-  jacomyal:
-    teams:
-      -
-  Khoyo:
-    teams:
-      -
-  kmer2016:
-    teams:
-      -
-  leovalais:
-    teams:
-      -
-  loic-hamelin:
-    teams:
-      -
-  louisgreiner:
-    teams:
-      -
-  maelysLeratRosso:
-    teams:
-      -
-  manalzidani:
-    teams:
-      -
-  Math-R:
-    teams:
-      -
-  Maymanaf:
-    teams:
-      -
-  Morgane-SJK:
-    teams:
-      -
-  multun:
-    teams:
-      -
-  nicolaswurtz:
-    teams:
-      -
-  Omar-938:
-    teams:
-      -
-  SarahBellaha:
-    teams:
-      -
-  SharglutDev:
-    teams:
-      -
-  shenriotpro:
-    teams:
-      -
-  sim51:
-    teams:
-      -
-  SimonPierreED:
-    teams:
-      -
-  Tguisnet:
-    teams:
-      -
-  Tristramg:
-    teams:
-      -
-  Uriel-Sautron:
-    teams:
-      -
-  Wadjetz:
-    teams:
-      -
-  woshilapin:
-    teams:
-      -
-  Yohh:
-    teams:
-      -
-  younesschrifi:
-    teams:
-      -
+    members:
+      - mxmehl
+      - mmthrowawayacc

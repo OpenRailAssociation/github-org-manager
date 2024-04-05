@@ -53,16 +53,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     def read_configured_teams(self):
         """Import configured teams of the org"""
 
-        def extract_teams_and_children(d, parent: str = ""):
-            for k, v in d.items():
-                self.configured_teams[k] = {"parent": parent}
-                # has child teams
-                if isinstance(v, dict):
-                    extract_teams_and_children(v, parent=k)
-
-        teams = get_config("config/openrailassociation.yaml", "teams")
-
-        extract_teams_and_children(teams)
+        # TODO: Figure out whether all config shall be in one file, and which one
+        self.configured_teams = get_config("config/openrailassociation.yaml", "teams")
 
     def create_missing_teams(self):
         """Find out which teams are configured but not part of the org yet"""
@@ -82,8 +74,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
                     self.org.create_team(team, parent_team_id=parent_id)
 
-                logging.info("Creating team '%s' without parent", team)
-                self.org.create_team(team, privacy="closed")
+                else:
+                    logging.info("Creating team '%s' without parent", team)
+                    self.org.create_team(team, privacy="closed")
+
+            else:
+                logging.debug("Team '%s' already exists", team)
 
         # Re-scan current teams as new ones may have been created
         self.get_current_teams()
@@ -146,6 +142,6 @@ def main():
     org = GHorg()
     org.login(ORG)
     org.create_missing_teams()
-    org.invite_missing_members()
+    # org.invite_missing_members()
 
     print(org)

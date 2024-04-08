@@ -132,6 +132,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             members_to_be_added = set(configured_team_members).difference(current_team_members)
             for member in members_to_be_added:
                 logging.info("Adding member '%s' to team '%s'", member.login, team.name)
+                # TODO: Also set and sync roles (member, maintainer) here!
                 team.add_membership(member)  # type: ignore
 
             # Remove members from team as they are not configured locally

@@ -5,43 +5,106 @@ teams:
   Technical Committee:
     members:
       - cornelius
-      - mxmehl
-      - loic-hamelin
       - Keller-Peter
+      - loic-hamelin
 
   OpenRail Team:
     members:
       - cornelius
+      - Keller-Peter
+      - loic-hamelin
+      - MahaliaStephan
       - mxmehl
       - SimonClavier
-      - loic-hamelin
-      - Keller-Peter
-      - MahaliaStephan
       - vlasceanuic
   # ----------------------------------------------------------------------------
   # OSRD - Open Source Railway Designer
   # ----------------------------------------------------------------------------
   OSRD:
     members:
+      # Team Maintainers
+      - bloussou
+      - ElysaSrc
+      - flomonster
       - loic-hamelin
-  OSRD Admins:
+      - nicolaswurtz
+      # Normal members
+      - achrafmohye
+      - Akctarus
+      - anisometropie
+      - bougue-pe
+      - Caracol3
+      - cassandrafestoc
+      - Castavo
+      - estia-m
+      - hamz2a
+      - jacomyal
+      - kmer2016
+      - louisgreiner
+      - maelysLeratRosso
+      - manalzidani
+      - Maymanaf
+      - Morgane-SJK
+      - Omar-938
+      - SarahBellaha
+      - SharglutDev
+      - sim51
+      - SimonPierreED
+      - Tristramg
+      - Uriel-Sautron
+      - Wadjetz
+      - Yohh
+  OSRD-Admins:
+    parent: OSRD
+    members:
+      # Team Maintainers
+      - flomonster
+      - loic-hamelin
+      # Normal members
+      - bloussou
+      - nicolaswurtz
+  # All members in the OSRD Maintainers team and the subteams are team maintainers
+  OSRD-Maintainers:
     parent: OSRD
     members:
       - loic-hamelin
-      - mxmehl
-  OSRD Maintainers:
-    parent: OSRD
-  OSRD Maintainers DevOps:
+  OSRD-DevOps:
     parent: OSRD Maintainers
     members:
-      - mmthrowawayacc
-  OSRD Maintainers Core:
+      - bloussou
+      - ElysaSrc
+      - Khoyo
+      - multun
+      - younesschrifi
+  OSRD-Core:
     parent: OSRD Maintainers
-  OSRD Maintainers Editoast:
+    members:
+      - eckter
+      - Erashin
+      - Khoyo
+      - multun
+  OSRD-Editoast:
     parent: OSRD Maintainers
-  OSRD Maintainers Front:
+    members:
+      - woshilapin
+      - flomonster
+      - Tguisnet
+      - leovalais
+  OSRD-Front:
     parent: OSRD Maintainers
-  OSRD Maintainers Tests:
+    members:
+      - clarani
+      - Math-R
+      - nicolaswurtz
+      - SharglutDev
+  OSRD-Tests:
     parent: OSRD Maintainers
-  OSRD Maintainers Physics:
+    members:
+      - bloussou
+      - eckter
+      - shenriotpro
+  OSRD-Physics:
     parent: OSRD Maintainers
+    members:
+      - axrolld
+      - bgiuliana

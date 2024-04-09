@@ -3,13 +3,14 @@ teams:
   # General OpenRail teams
   # ----------------------------------------------------------------------------
   Technical Committee:
-    members:
+    maintainer:
       - cornelius
+    member:
       - Keller-Peter
       - loic-hamelin
 
   OpenRail Team:
-    members:
+    member:
       - cornelius
       - Keller-Peter
       - loic-hamelin
@@ -21,14 +22,13 @@ teams:
   # OSRD - Open Source Railway Designer
   # ----------------------------------------------------------------------------
   OSRD:
-    members:
-      # Team Maintainers
+    maintainer:
       - bloussou
       - ElysaSrc
       - flomonster
       - loic-hamelin
       - nicolaswurtz
-      # Normal members
+    member:
       - achrafmohye
       - Akctarus
       - anisometropie
@@ -60,21 +60,19 @@ teams:
       - Yohh
   OSRD-Admins:
     parent: OSRD
-    members:
-      # Team Maintainers
-      - flomonster
+    maintainer:
       - loic-hamelin
-      # Normal members
+      - flomonster
+    member:
       - bloussou
       - nicolaswurtz
-  # All members in the OSRD Maintainers team and the subteams are team maintainers
   OSRD-Maintainers:
     parent: OSRD
-    members:
+    maintainer:
       - loic-hamelin
   OSRD-DevOps:
     parent: OSRD Maintainers
-    members:
+    maintainer:
       - bloussou
       - ElysaSrc
       - Khoyo
@@ -82,33 +80,33 @@ teams:
       - younesschrifi
   OSRD-Core:
     parent: OSRD Maintainers
-    members:
+    maintainer:
       - eckter
       - Erashin
       - Khoyo
       - multun
   OSRD-Editoast:
     parent: OSRD Maintainers
-    members:
+    maintainer:
       - woshilapin
       - flomonster
       - Tguisnet
       - leovalais
   OSRD-Front:
     parent: OSRD Maintainers
-    members:
+    maintainer:
       - clarani
       - Math-R
       - nicolaswurtz
       - SharglutDev
   OSRD-Tests:
     parent: OSRD Maintainers
-    members:
+    maintainer:
       - bloussou
       - eckter
       - shenriotpro
   OSRD-Physics:
     parent: OSRD Maintainers
-    members:
+    maintainer:
       - axrolld
       - bgiuliana

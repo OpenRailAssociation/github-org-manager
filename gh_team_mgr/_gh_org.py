@@ -100,13 +100,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 )
                 continue
 
-            # Get locally configured team members
+            # Get configuration from current team
             local_team = self.configured_teams.get(team.name)
 
-            if not isinstance(local_team, dict) or not local_team.get("members"):
-                logging.debug("Team '%s' has no configured members", team.name)
-                configured_team_members = []
-            else:
+            # Read configured members from the configuration, convert to NamedUser object
+            if isinstance(local_team, dict) and local_team.get("members"):
                 try:
                     configured_team_members = [
                         self.gh.get_user(user) for user in local_team.get("members")  # type: ignore
@@ -118,6 +116,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                         team.name,
                     )
                     continue
+            else:
+                logging.debug("Team '%s' has no configured members", team.name)
+                configured_team_members = []
 
             # Get actual team members at GitHub. Problem: this also seems to
             # include child team members

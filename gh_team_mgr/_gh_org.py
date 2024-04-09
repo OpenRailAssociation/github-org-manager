@@ -15,10 +15,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     gh: Github = None  # type: ignore
     org: Organization.Organization = None  # type: ignore
-    current_members: list[NamedUser.NamedUser] = field(default_factory=list)
-    configured_members: dict[str, dict] = field(default_factory=dict)
-    missing_members_at_github: dict[str, dict] = field(default_factory=dict)
-    unconfigured_members: list[str] = field(default_factory=list)
+    org_owners: list[NamedUser.NamedUser] = field(default_factory=list)
     current_teams: list[Team.Team] = field(default_factory=list)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
 
@@ -81,16 +78,31 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
-    def get_current_members(self):
-        """Get all current members of the org, lower-cased"""
-        for member in self.org.get_members():
-            self.current_members.append(member)
+    def _get_org_owners(self):
+        """Get all owners of the org"""
+        for member in self.org.get_members(role="admin"):
+            self.org_owners.append(member)
+
+    def _get_configured_team_members(
+        self, team_config: dict, team_name: str, role: str
+    ) -> list[str]:
+        """Read configured members/maintainers from the configuration"""
+
+        if isinstance(team_config, dict) and team_config.get(role):
+            configured_team_members = []
+            for user in team_config.get(role, []):
+                configured_team_members.append(user)
+
+            return configured_team_members
+
+        logging.debug("Team '%s' has no configured %ss", team_name, role)
+        return []
 
     def sync_teams_members(self):
         """Check the configured members of each team, add missing ones and delete unconfigured"""
-        for team in self.current_teams:
-            logging.info("Syncing members of team '%s'", team.name)
+        self._get_org_owners()
 
+        for team in self.current_teams:
             # Handle the team not being configured locally
             if team.name not in self.configured_teams:
                 logging.warning(
@@ -101,41 +113,86 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 continue
 
             # Get configuration from current team
-            local_team = self.configured_teams.get(team.name)
+            team_configuration = self.configured_teams.get(team.name)
 
-            # Read configured members from the configuration, convert to NamedUser object
-            if isinstance(local_team, dict) and local_team.get("members"):
-                try:
-                    configured_team_members = [
-                        self.gh.get_user(user) for user in local_team.get("members")  # type: ignore
-                    ]
-                except UnknownObjectException:
-                    logging.error(
-                        "At least one of the configured members of the team '%s' "
-                        "does not seem to exist. Check the spelling! Skipping this team",
-                        team.name,
+            # Add members and maintainers to shared dict with respective role,
+            # while maintainer role dominates
+            configured_users: dict[NamedUser.NamedUser, str] = {}
+            for config_role in ("member", "maintainer"):
+                team_members = self._get_configured_team_members(
+                    team_configuration, team.name, config_role
+                )
+                for config_user in team_members:
+                    # Add user to dict, trying to find them on GitHub
+                    try:
+                        configured_users.update({self.gh.get_user(config_user): config_role})
+                    except UnknownObjectException:
+                        logging.error(
+                            "The user '%s' configured as %s for the team '%s' does not "
+                            "exist on GitHub. Spelling error or did they rename themselves?",
+                            config_user,
+                            config_role,
+                            team.name,
+                        )
+
+            # Consider all GitHub organisation team maintainers if they are member of the team
+            # This is because GitHub API returns them as maintainers even if they are just members
+            for user in self.org_owners:
+                if user in configured_users:
+                    logging.debug(
+                        "Overriding role of organisation owner '%s' to maintainer", user.login
                     )
-                    continue
-            else:
-                logging.debug("Team '%s' has no configured members", team.name)
-                configured_team_members = []
+                    configured_users[user] = "maintainer"
 
-            # Get actual team members at GitHub. Problem: this also seems to
-            # include child team members
-            current_team_members = []
-            for member in list(team.get_members()):
-                if team.has_in_members(member):
-                    current_team_members.append(member)
+            # Analog to configured_users, create dict of current users with their respective roles
+            current_users = {}
+            for role in ("member", "maintainer"):
+                # Make a two-step check whether person is actually in team, as
+                # get_members() also return child-team members
+                for user in list(team.get_members(role=role)):
+                    current_users.update({user: role})
 
-            # Add members who are not in GitHub team but should be
-            members_to_be_added = set(configured_team_members).difference(current_team_members)
-            for member in members_to_be_added:
-                logging.info("Adding member '%s' to team '%s'", member.login, team.name)
-                # TODO: Also set and sync roles (member, maintainer) here!
-                team.add_membership(member)  # type: ignore
+            # Only make edits to the team membership if the current state differs from config
+            if configured_users == current_users:
+                logging.info("Team '%s' configuration is in sync, no changes", team.name)
+                continue
 
-            # Remove members from team as they are not configured locally
-            members_to_be_removed = set(current_team_members).difference(configured_team_members)
-            for member in members_to_be_removed:
-                logging.info("Removing member '%s' from team '%s'", member.login, team.name)
-                team.remove_membership(member)
+            # Loop through the configured users, add / update them if necessary
+            for config_user, config_role in configured_users.items():
+                # Add user if they haven't been in the team yet
+                if config_user not in current_users:
+                    logging.info(
+                        "Adding '%s' to team '%s' as %s",
+                        config_user.login,
+                        team.name,
+                        config_role,
+                    )
+                    team.add_membership(member=config_user, role=config_role)
+
+                # Update roles if they differ from old role
+                elif config_role != current_users.get(config_user):
+                    logging.info(
+                        "Updating role of '%s' in team '%s' to %s",
+                        config_user.login,
+                        team.name,
+                        config_role,
+                    )
+                    team.add_membership(member=config_user, role=config_role)
+
+            # Loop through all current members. Remove them if they are not configured
+            for current_user in current_users:
+                if current_user not in configured_users:
+                    if team.has_in_members(current_user):
+                        logging.info(
+                            "Removing '%s' from team '%s' as they are not configured",
+                            current_user.login,
+                            team.name,
+                        )
+                        team.remove_membership(current_user)
+                    else:
+                        logging.debug(
+                            "User '%s' does not need to be removed from team '%s' "
+                            "as they are just member of a child-team",
+                            current_user.login,
+                            team.name,
+                        )

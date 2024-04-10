@@ -16,6 +16,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     gh: Github = None  # type: ignore
     org: Organization.Organization = None  # type: ignore
     org_owners: list[NamedUser.NamedUser] = field(default_factory=list)
+    org_members: list[NamedUser.NamedUser] = field(default_factory=list)
     # {Team: {"members": dict[NamedUsers], "repos": dict[Repo]}}
     current_teams: dict[Team.Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
@@ -99,10 +100,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
-    def _get_org_owners(self):
+    def _get_org_members(self):
         """Get all owners of the org"""
         for member in self.org.get_members(role="admin"):
             self.org_owners.append(member)
+        for member in self.org.get_members(role="member"):
+            self.org_members.append(member)
 
     def _get_configured_team_members(
         self, team_config: dict, team_name: str, role: str
@@ -133,7 +136,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
         """Check the configured members of each team, add missing ones and delete unconfigured"""
-        self._get_org_owners()
+        # Gather all members and owners of the organisation
+        self._get_org_members()
 
         for team, team_attrs in self.current_teams.items():
             team_attrs["members"] = self._get_current_team_members(team)
@@ -232,3 +236,25 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             current_user.login,
                             team.name,
                         )
+
+    def get_members_without_team(self):
+        """Get all organisation members without any team membership"""
+        # Combine org owners and org members
+        all_org_members = set(self.org_members + self.org_owners)
+
+        # Get all members of all teams
+        all_team_members = []
+        for _, team_attrs in self.current_teams.items():
+            for member in team_attrs.get("members", {}):
+                all_team_members.append(member)
+        all_team_members = set(all_team_members)
+
+        # Find members that are in org_members but not team_members
+        members_without_team = all_org_members.difference(all_team_members)
+
+        if members_without_team:
+            members_without_team_str = [user.login for user in members_without_team]
+            logging.warning(
+                "The following members of your GitHub organisation are not member of any team: %s",
+                ", ".join(members_without_team_str),
+            )

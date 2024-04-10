@@ -36,4 +36,4 @@ def main():
     org.create_missing_teams(dry=args.dry)
     org.sync_teams_members(dry=args.dry)
 
-    logging.debug("Final dataclass: %s", org)
+    logging.debug("Final dataclass:\n%s", org.df2json())

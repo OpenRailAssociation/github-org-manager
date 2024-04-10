@@ -1,7 +1,7 @@
 """Class for the GitHub organization which contains most of the logic"""
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 from github import Github, NamedUser, Organization, Team, UnknownObjectException
 
@@ -32,6 +32,23 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """Login to GH, gather org data"""
         self.gh = Github(get_github_token())
         self.org = self.gh.get_organization(orgname)
+
+    def df2json(self) -> str:
+        """Convert the dataclass to a JSON string"""
+        d = asdict(self)
+
+        def pretty(d, indent=0):
+            string = ""
+            for key, value in d.items():
+                string += "  " * indent + str(key) + ":\n"
+                if isinstance(value, dict):
+                    string += pretty(value, indent + 1)
+                else:
+                    string += "  " * (indent + 1) + str(value) + "\n"
+
+            return string
+
+        return pretty(d)
 
     # --------------------------------------------------------------------------
     # Teams

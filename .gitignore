@@ -177,4 +177,5 @@ pyrightconfig.json
 
 
 # App specific
-config/app_config.yaml
+config/*
+!config/example/

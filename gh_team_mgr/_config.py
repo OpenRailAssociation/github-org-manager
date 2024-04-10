@@ -67,14 +67,14 @@ def _find_matching_files(directory: str, pattern: str, only_one: bool = False) -
     return matching_files
 
 
-def _read_config_file(file: str, setting: str = "") -> Any:
-    """Read a YAML file, optionally returning just a certain key"""
+def _read_config_file(file: str) -> dict:
+    """Return dict of a YAML file"""
     logging.debug("Attempting to parse YAML file %s", file)
     with open(file, encoding="UTF-8") as yamlfile:
         config: dict = yaml.safe_load(yamlfile)
 
-    if setting:
-        return config.get(setting)
+    if not config:
+        config = {}
 
     return config
 

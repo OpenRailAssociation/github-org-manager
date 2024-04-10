@@ -1,0 +1,11 @@
+Maintainers:
+  maintainer:
+    - octocat
+  member:
+    - user1
+    - user2
+
+Subproject:
+  parent: Maintainers
+  member:
+    - user2

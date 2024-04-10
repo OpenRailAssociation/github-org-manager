@@ -5,7 +5,6 @@ from dataclasses import asdict, dataclass, field
 
 from github import Github, NamedUser, Organization, Team, UnknownObjectException
 
-from ._config import get_config
 from ._gh_api import get_github_token
 
 
@@ -30,9 +29,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # supported, or multiple spaces etc.
         return team.replace(" ", "-")
 
-    def login(self, orgname):
+    def login(self, orgname: str, token: str):
         """Login to GH, gather org data"""
-        self.gh = Github(get_github_token())
+        self.gh = Github(get_github_token(token))
         self.org = self.gh.get_organization(orgname)
 
     def df2json(self) -> str:
@@ -61,18 +60,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for team in list(self.org.get_teams()):
             self.current_teams[team] = {"members": {}, "repos": {}}
 
-    def read_configured_teams(self):
-        """Import configured teams of the org"""
-
-        # TODO: Figure out whether all config shall be in one file, and which one
-        self.configured_teams = get_config("config/openrailassociation.yaml", "teams")
-
     def create_missing_teams(self, dry: bool = False):
         """Find out which teams are configured but not part of the org yet"""
 
-        # Get list of current and configured teams
+        # Get list of current teams
         self.get_current_teams()
-        self.read_configured_teams()
 
         # Get the names of the existing teams
         existent_team_names = [team.name for team in self.current_teams]

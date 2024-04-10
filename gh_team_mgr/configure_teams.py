@@ -16,6 +16,7 @@ parser.add_argument(
     help="Name of the GitHub organization you would like to handle",
 )
 parser.add_argument("--debug", action="store_true", help="Get verbose logging output")
+parser.add_argument("--dry", action="store_true", help="Do not make any changes at GitHub")
 parser.add_argument("--version", action="version", version="GitHub Team Manager " + __version__)
 
 
@@ -26,9 +27,14 @@ def main():
     args = parser.parse_args()
 
     configure_logger(args.debug)
+
+    if args.dry:
+        logging.info("Dry-run mode activated, will not make any changes at GitHub")
+
     org = GHorg()
     org.login(args.organization)
-    org.create_missing_teams()
-    org.sync_teams_members()
+    org.create_missing_teams(dry=args.dry)
+    org.sync_teams_members(dry=args.dry)
+    org.get_members_without_team()
 
-    logging.debug("Final dataclass: %s", org)
+    logging.debug("Final dataclass:\n%s", org.df2json())

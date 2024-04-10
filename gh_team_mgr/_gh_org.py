@@ -98,7 +98,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         logging.debug("Team '%s' has no configured %ss", team_name, role)
         return []
 
-    def sync_teams_members(self):
+    def sync_teams_members(self) -> None:  # pylint: disable=too-many-branches
         """Check the configured members of each team, add missing ones and delete unconfigured"""
         self._get_org_owners()
 
@@ -113,7 +113,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 continue
 
             # Get configuration from current team
-            team_configuration = self.configured_teams.get(team.name)
+            if team_configuration := self.configured_teams.get(team.name):
+                pass
+            else:
+                team_configuration = {}
 
             # Add members and maintainers to shared dict with respective role,
             # while maintainer role dominates
@@ -122,15 +125,18 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 team_members = self._get_configured_team_members(
                     team_configuration, team.name, config_role
                 )
-                for config_user in team_members:
+                for team_member in team_members:
                     # Add user to dict, trying to find them on GitHub
                     try:
-                        configured_users.update({self.gh.get_user(config_user): config_role})
+                        gh_user_obj: NamedUser.NamedUser = self.gh.get_user(
+                            team_member
+                        )  # type: ignore
+                        configured_users.update({gh_user_obj: config_role})
                     except UnknownObjectException:
                         logging.error(
                             "The user '%s' configured as %s for the team '%s' does not "
                             "exist on GitHub. Spelling error or did they rename themselves?",
-                            config_user,
+                            team_member,
                             config_role,
                             team.name,
                         )
@@ -145,7 +151,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     configured_users[user] = "maintainer"
 
             # Analog to configured_users, create dict of current users with their respective roles
-            current_users = {}
+            current_users: dict[NamedUser.NamedUser, str] = {}
             for role in ("member", "maintainer"):
                 # Make a two-step check whether person is actually in team, as
                 # get_members() also return child-team members
@@ -170,7 +176,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     team.add_membership(member=config_user, role=config_role)
 
                 # Update roles if they differ from old role
-                elif config_role != current_users.get(config_user):
+                elif config_role != current_users.get(config_user, ""):
                     logging.info(
                         "Updating role of '%s' in team '%s' to %s",
                         config_user.login,

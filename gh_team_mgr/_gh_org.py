@@ -1,7 +1,7 @@
 """Class for the GitHub organization which contains most of the logic"""
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 from github import Github, NamedUser, Organization, Team, UnknownObjectException
 
@@ -16,7 +16,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     gh: Github = None  # type: ignore
     org: Organization.Organization = None  # type: ignore
     org_owners: list[NamedUser.NamedUser] = field(default_factory=list)
-    current_teams: list[Team.Team] = field(default_factory=list)
+    org_members: list[NamedUser.NamedUser] = field(default_factory=list)
+    # {Team: {"members": dict[NamedUsers], "repos": dict[Repo]}}
+    current_teams: dict[Team.Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
 
     # --------------------------------------------------------------------------
@@ -33,13 +35,31 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         self.gh = Github(get_github_token())
         self.org = self.gh.get_organization(orgname)
 
+    def df2json(self) -> str:
+        """Convert the dataclass to a JSON string"""
+        d = asdict(self)
+
+        def pretty(d, indent=0):
+            string = ""
+            for key, value in d.items():
+                string += "  " * indent + str(key) + ":\n"
+                if isinstance(value, dict):
+                    string += pretty(value, indent + 1)
+                else:
+                    string += "  " * (indent + 1) + str(value) + "\n"
+
+            return string
+
+        return pretty(d)
+
     # --------------------------------------------------------------------------
     # Teams
     # --------------------------------------------------------------------------
     def get_current_teams(self):
         """Get teams of the existing organisation"""
 
-        self.current_teams = list(self.org.get_teams())
+        for team in list(self.org.get_teams()):
+            self.current_teams[team] = {"members": {}, "repos": {}}
 
     def read_configured_teams(self):
         """Import configured teams of the org"""
@@ -47,7 +67,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # TODO: Figure out whether all config shall be in one file, and which one
         self.configured_teams = get_config("config/openrailassociation.yaml", "teams")
 
-    def create_missing_teams(self):
+    def create_missing_teams(self, dry: bool = False):
         """Find out which teams are configured but not part of the org yet"""
 
         # Get list of current and configured teams
@@ -63,11 +83,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     parent_id = self.org.get_team_by_slug(self._sluggify_teamname(parent)).id
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
-                    self.org.create_team(team, parent_team_id=parent_id)
+                    if not dry:
+                        self.org.create_team(team, parent_team_id=parent_id)
 
                 else:
                     logging.info("Creating team '%s' without parent", team)
-                    self.org.create_team(team, privacy="closed")
+                    if not dry:
+                        self.org.create_team(team, privacy="closed")
 
             else:
                 logging.debug("Team '%s' already exists", team)
@@ -78,10 +100,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
-    def _get_org_owners(self):
+    def _get_org_members(self):
         """Get all owners of the org"""
         for member in self.org.get_members(role="admin"):
             self.org_owners.append(member)
+        for member in self.org.get_members(role="member"):
+            self.org_members.append(member)
 
     def _get_configured_team_members(
         self, team_config: dict, team_name: str, role: str
@@ -98,11 +122,26 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         logging.debug("Team '%s' has no configured %ss", team_name, role)
         return []
 
-    def sync_teams_members(self) -> None:  # pylint: disable=too-many-branches
-        """Check the configured members of each team, add missing ones and delete unconfigured"""
-        self._get_org_owners()
+    def _get_current_team_members(self, team: Team.Team) -> dict[NamedUser.NamedUser, str]:
+        """Return dict of current users with their respective roles. Also
+        contains members of child teams"""
+        current_users: dict[NamedUser.NamedUser, str] = {}
+        for role in ("member", "maintainer"):
+            # Make a two-step check whether person is actually in team, as
+            # get_members() also return child-team members
+            for user in list(team.get_members(role=role)):
+                current_users.update({user: role})
 
-        for team in self.current_teams:
+        return current_users
+
+    def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
+        """Check the configured members of each team, add missing ones and delete unconfigured"""
+        # Gather all members and owners of the organisation
+        self._get_org_members()
+
+        for team, team_attrs in self.current_teams.items():
+            team_attrs["members"] = self._get_current_team_members(team)
+
             # Handle the team not being configured locally
             if team.name not in self.configured_teams:
                 logging.warning(
@@ -118,8 +157,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             else:
                 team_configuration = {}
 
-            # Add members and maintainers to shared dict with respective role,
-            # while maintainer role dominates
+            # Analog to team_attrs["members"], add members and maintainers to shared
+            # dict with respective role, while maintainer role dominates
             configured_users: dict[NamedUser.NamedUser, str] = {}
             for config_role in ("member", "maintainer"):
                 team_members = self._get_configured_team_members(
@@ -150,43 +189,37 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     )
                     configured_users[user] = "maintainer"
 
-            # Analog to configured_users, create dict of current users with their respective roles
-            current_users: dict[NamedUser.NamedUser, str] = {}
-            for role in ("member", "maintainer"):
-                # Make a two-step check whether person is actually in team, as
-                # get_members() also return child-team members
-                for user in list(team.get_members(role=role)):
-                    current_users.update({user: role})
-
             # Only make edits to the team membership if the current state differs from config
-            if configured_users == current_users:
+            if configured_users == team_attrs["members"]:
                 logging.info("Team '%s' configuration is in sync, no changes", team.name)
                 continue
 
             # Loop through the configured users, add / update them if necessary
             for config_user, config_role in configured_users.items():
                 # Add user if they haven't been in the team yet
-                if config_user not in current_users:
+                if config_user not in team_attrs["members"]:
                     logging.info(
                         "Adding '%s' to team '%s' as %s",
                         config_user.login,
                         team.name,
                         config_role,
                     )
-                    team.add_membership(member=config_user, role=config_role)
+                    if not dry:
+                        team.add_membership(member=config_user, role=config_role)
 
                 # Update roles if they differ from old role
-                elif config_role != current_users.get(config_user, ""):
+                elif config_role != team_attrs["members"].get(config_user, ""):
                     logging.info(
                         "Updating role of '%s' in team '%s' to %s",
                         config_user.login,
                         team.name,
                         config_role,
                     )
-                    team.add_membership(member=config_user, role=config_role)
+                    if not dry:
+                        team.add_membership(member=config_user, role=config_role)
 
             # Loop through all current members. Remove them if they are not configured
-            for current_user in current_users:
+            for current_user in team_attrs["members"]:
                 if current_user not in configured_users:
                     if team.has_in_members(current_user):
                         logging.info(
@@ -194,7 +227,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             current_user.login,
                             team.name,
                         )
-                        team.remove_membership(current_user)
+                        if not dry:
+                            team.remove_membership(current_user)
                     else:
                         logging.debug(
                             "User '%s' does not need to be removed from team '%s' "
@@ -202,3 +236,25 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             current_user.login,
                             team.name,
                         )
+
+    def get_members_without_team(self):
+        """Get all organisation members without any team membership"""
+        # Combine org owners and org members
+        all_org_members = set(self.org_members + self.org_owners)
+
+        # Get all members of all teams
+        all_team_members = []
+        for _, team_attrs in self.current_teams.items():
+            for member in team_attrs.get("members", {}):
+                all_team_members.append(member)
+        all_team_members = set(all_team_members)
+
+        # Find members that are in org_members but not team_members
+        members_without_team = all_org_members.difference(all_team_members)
+
+        if members_without_team:
+            members_without_team_str = [user.login for user in members_without_team]
+            logging.warning(
+                "The following members of your GitHub organisation are not member of any team: %s",
+                ", ".join(members_without_team_str),
+            )

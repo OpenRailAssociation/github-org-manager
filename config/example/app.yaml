@@ -1,0 +1,6 @@
+# ------------------------------------------------------------------------------
+# General configuration for this program
+# ------------------------------------------------------------------------------
+
+# Personal Oauth access token with required scopes
+github_token: ghp_abcdefg123

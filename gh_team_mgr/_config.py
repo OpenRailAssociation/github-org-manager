@@ -35,7 +35,7 @@ def _find_matching_files(directory: str, pattern: str, only_one: bool = False) -
 
     else:
         # Compile the regex pattern
-        regex_pattern = re.compile(pattern)
+        regex_pattern = re.compile(pattern + "$")
 
         # Traverse the directory and find matching files
         for file_name in os.listdir(directory):

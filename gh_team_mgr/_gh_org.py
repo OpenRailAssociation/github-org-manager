@@ -47,7 +47,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # TODO: Figure out whether all config shall be in one file, and which one
         self.configured_teams = get_config("config/openrailassociation.yaml", "teams")
 
-    def create_missing_teams(self):
+    def create_missing_teams(self, dry: bool = False):
         """Find out which teams are configured but not part of the org yet"""
 
         # Get list of current and configured teams
@@ -63,11 +63,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     parent_id = self.org.get_team_by_slug(self._sluggify_teamname(parent)).id
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
-                    self.org.create_team(team, parent_team_id=parent_id)
+                    if not dry:
+                        self.org.create_team(team, parent_team_id=parent_id)
 
                 else:
                     logging.info("Creating team '%s' without parent", team)
-                    self.org.create_team(team, privacy="closed")
+                    if not dry:
+                        self.org.create_team(team, privacy="closed")
 
             else:
                 logging.debug("Team '%s' already exists", team)
@@ -98,7 +100,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         logging.debug("Team '%s' has no configured %ss", team_name, role)
         return []
 
-    def sync_teams_members(self) -> None:  # pylint: disable=too-many-branches
+    def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
         """Check the configured members of each team, add missing ones and delete unconfigured"""
         self._get_org_owners()
 
@@ -173,7 +175,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                         team.name,
                         config_role,
                     )
-                    team.add_membership(member=config_user, role=config_role)
+                    if not dry:
+                        team.add_membership(member=config_user, role=config_role)
 
                 # Update roles if they differ from old role
                 elif config_role != current_users.get(config_user, ""):
@@ -183,7 +186,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                         team.name,
                         config_role,
                     )
-                    team.add_membership(member=config_user, role=config_role)
+                    if not dry:
+                        team.add_membership(member=config_user, role=config_role)
 
             # Loop through all current members. Remove them if they are not configured
             for current_user in current_users:
@@ -194,7 +198,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             current_user.login,
                             team.name,
                         )
-                        team.remove_membership(current_user)
+                        if not dry:
+                            team.remove_membership(current_user)
                     else:
                         logging.debug(
                             "User '%s' does not need to be removed from team '%s' "

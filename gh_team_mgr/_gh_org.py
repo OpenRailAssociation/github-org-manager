@@ -329,7 +329,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # should not have permissions
         for repo, teams in self.current_repos.items():
             for team in teams:
-                # Get configured repos for this team, catching all kinds of missing config
+                # Get configured repos for this team, finding out whether repo
+                # is configured for this team
+                remove = False
+                # Handle: Team is not configured at all
                 if team.name not in self.configured_teams:
                     logging.warning(
                         "Team '%s' has permissions on repository '%s', but this team "
@@ -338,14 +341,21 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                         repo.name,
                     )
                     continue
+                # Handle: Team is configured, but contains no config
                 if self.configured_teams[team.name] is None:
-                    continue
-                if repos := self.configured_teams[team.name].get("repos", []):  # type: ignore
+                    remove = True
+                # Handle: Team is configured, contains config
+                elif repos := self.configured_teams[team.name].get("repos", []):  # type: ignore
                     # If this repo has not been found in the configured repos
                     # for the team, remove all permissions
                     if repo.name not in repos:
-                        logging.info(
-                            "Removing team '%s' from repository '%s'", team.name, repo.name
-                        )
-                        if not dry:
-                            team.remove_from_repos(repo)
+                        remove = True
+                # Handle: Team is configured, contains config, but no "repos" key
+                else:
+                    remove = True
+
+                # Remove if any mismatch has been found
+                if remove:
+                    logging.info("Removing team '%s' from repository '%s'", team.name, repo.name)
+                    if not dry:
+                        team.remove_from_repos(repo)

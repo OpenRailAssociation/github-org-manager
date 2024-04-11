@@ -257,11 +257,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         all_org_members = set(self.org_members + self.org_owners)
 
         # Get all members of all teams
-        all_team_members = []
+        all_team_members_lst = []
         for _, team_attrs in self.current_teams.items():
             for member in team_attrs.get("members", {}):
-                all_team_members.append(member)
-        all_team_members = set(all_team_members)
+                all_team_members_lst.append(member)
+        all_team_members = set(all_team_members_lst)
 
         # Find members that are in org_members but not team_members
         members_without_team = all_org_members.difference(all_team_members)

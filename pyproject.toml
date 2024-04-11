@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "github-team-manager"
+name = "github-org-manager"
 version = "0.1.0"
-description = ""
+description = "Manage a GitHub Organization, its teams, repository permissions, and more"
 authors = ["Max Mehl <max.mehl@deutschebahn.com>"]
 readme = "README.md"
-packages = [{include = "gh_team_mgr"}]
+packages = [{include = "gh_org_mgr"}]
 
 [tool.poetry.scripts]
-configure-teams = 'gh_team_mgr.configure_teams:main'
+gh-org-mgr = 'gh_org_mgr.manage:main'
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -37,4 +37,4 @@ line-length = 100
 
 # MYPY settings
 [tool.mypy]
-files = ["gh_team_mgr/*.py"]
+files = ["gh_org_mgr/*.py"]

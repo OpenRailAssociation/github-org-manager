@@ -1,4 +1,4 @@
-"""Manage people and teams in a GitHub Organization"""
+"""Manage a GitHub Organization, its teams, repository permissions, and more"""
 
 import argparse
 import logging

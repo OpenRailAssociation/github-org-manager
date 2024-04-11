@@ -3,7 +3,7 @@
 import logging
 from importlib.metadata import version
 
-__version__ = version("github-team-manager")
+__version__ = version("github-org-manager")
 
 
 def configure_logger(debug: bool = False) -> logging.Logger:

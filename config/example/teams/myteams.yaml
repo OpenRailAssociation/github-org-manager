@@ -1,11 +1,21 @@
+# A Team with its name
 Maintainers:
+  # Team maintainers, can add new people and change team settings
   maintainer:
     - octocat
+  # Normal team members
   member:
     - user1
     - user2
+  # The repositories the team shall have access to with a certain permission
+  # Can be one of: pull, triage, push, maintain, admin
+  repos:
+    cool-repository: admin
+    other-repo: admin
 
 Subproject:
   parent: Maintainers
   member:
     - user2
+  repos:
+    cool-repository: maintain

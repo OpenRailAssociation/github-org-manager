@@ -61,7 +61,9 @@ def _find_matching_files(directory: str, pattern: str, only_one: bool = False) -
 
     if not matching_files:
         logging.error(
-            "No configuration file found for '%s', the program might not work as expected!"
+            "No configuration file found for '%s' in '%s'. The program might not work as expected!",
+            pattern,
+            directory
         )
 
     return matching_files

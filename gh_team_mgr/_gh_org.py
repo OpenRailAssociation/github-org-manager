@@ -3,7 +3,14 @@
 import logging
 from dataclasses import asdict, dataclass, field
 
-from github import Github, NamedUser, Organization, Team, UnknownObjectException
+from github import (
+    Github,
+    NamedUser,
+    Organization,
+    Repository,
+    Team,
+    UnknownObjectException,
+)
 
 from ._gh_api import get_github_token
 
@@ -16,9 +23,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     org: Organization.Organization = None  # type: ignore
     org_owners: list[NamedUser.NamedUser] = field(default_factory=list)
     org_members: list[NamedUser.NamedUser] = field(default_factory=list)
-    # {Team: {"members": dict[NamedUsers], "repos": dict[Repo]}}
     current_teams: dict[Team.Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
+    current_repos: dict[Repository.Repository, dict[Team.Team, str]] = field(default_factory=dict)
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -128,6 +135,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
         """Check the configured members of each team, add missing ones and delete unconfigured"""
+        logging.debug("Starting to sync team members")
+
         # Gather all members and owners of the organisation
         self._get_org_members()
 
@@ -229,7 +238,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             team.name,
                         )
 
-    def get_members_without_team(self):
+    def get_members_without_team(self) -> None:
         """Get all organisation members without any team membership"""
         # Combine org owners and org members
         all_org_members = set(self.org_members + self.org_owners)
@@ -250,3 +259,103 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 "The following members of your GitHub organisation are not member of any team: %s",
                 ", ".join(members_without_team_str),
             )
+
+    # --------------------------------------------------------------------------
+    # Repos
+    # --------------------------------------------------------------------------
+    def _get_current_repos_and_perms(self) -> None:
+        """Get all repos, their current teams and their permissions"""
+        for repo in list(self.org.get_repos()):
+            self.current_repos[repo] = {}
+            for team in list(repo.get_teams()):
+                self.current_repos[repo][team] = team.permission
+
+    def _create_perms_changelist_for_teams(
+        self,
+    ) -> dict[Team.Team, dict[Repository.Repository, str]]:
+        """Create a permission/repo changelist from the perspective of configured teams"""
+        team_changelist: dict[Team.Team, dict[Repository.Repository, str]] = {}
+        for team_name, team_attrs in self.configured_teams.items():
+            # Handle unset configured attributes
+            if team_attrs is None:
+                continue
+
+            # Convert team name to Team object
+            team = self.org.get_team_by_slug(self._sluggify_teamname(team_name))
+
+            # Get configured repo permissions
+            for repo, perm in team_attrs.get("repos", {}).items():
+                # Convert repo to Repo object
+                try:
+                    repo = self.org.get_repo(repo)
+                except UnknownObjectException:
+                    logging.warning(
+                        "Configured repository '%s' for team '%s' has not been "
+                        "found in the organisation",
+                        repo,
+                        team.name,
+                    )
+                    continue
+
+                if perm != self.current_repos[repo].get(team):
+                    # Add the changeset to the changelist
+                    if team not in team_changelist:
+                        team_changelist[team] = {}
+                    team_changelist[team][repo] = perm
+
+        return team_changelist
+
+    def sync_repo_permissions(self, dry: bool = False) -> None:
+        """Synchronise the repository permissions of all teams"""
+        logging.debug("Starting to sync repo/team permissions")
+
+        # Get all repos and their current permissions from GitHub
+        self._get_current_repos_and_perms()
+
+        # Find differences between configured permissions for a team's repo and the current state
+        for team, repos in self._create_perms_changelist_for_teams().items():
+            for repo, perm in repos.items():
+                logging.info(
+                    "Changing permission of repository '%s' for team '%s' to '%s'",
+                    repo.name,
+                    team.name,
+                    perm,
+                )
+                if not dry:
+                    # Update permissions or newly add a team to a repo
+                    team.update_team_repository(repo, perm)
+
+        # Find out whether repos' permissions contain *configured* teams that
+        # should not have permissions
+        for repo, teams in self.current_repos.items():
+            for team in teams:
+                # Get configured repos for this team, finding out whether repo
+                # is configured for this team
+                remove = False
+                # Handle: Team is not configured at all
+                if team.name not in self.configured_teams:
+                    logging.warning(
+                        "Team '%s' has permissions on repository '%s', but this team "
+                        "is not configured locally",
+                        team.name,
+                        repo.name,
+                    )
+                    continue
+                # Handle: Team is configured, but contains no config
+                if self.configured_teams[team.name] is None:
+                    remove = True
+                # Handle: Team is configured, contains config
+                elif repos := self.configured_teams[team.name].get("repos", []):  # type: ignore
+                    # If this repo has not been found in the configured repos
+                    # for the team, remove all permissions
+                    if repo.name not in repos:
+                        remove = True
+                # Handle: Team is configured, contains config, but no "repos" key
+                else:
+                    remove = True
+
+                # Remove if any mismatch has been found
+                if remove:
+                    logging.info("Removing team '%s' from repository '%s'", team.name, repo.name)
+                    if not dry:
+                        team.remove_from_repos(repo)

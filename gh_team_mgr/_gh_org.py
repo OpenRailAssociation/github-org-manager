@@ -140,6 +140,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # Gather all members and owners of the organisation
         self._get_org_members()
 
+        # Get open invitations
+        open_invitations = [user.login for user in self.org.invitations()]
+
         for team, team_attrs in self.current_teams.items():
             team_attrs["members"] = self._get_current_team_members(team)
 
@@ -199,8 +202,18 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             for config_user, config_role in configured_users.items():
                 # Add user if they haven't been in the team yet
                 if config_user not in team_attrs["members"]:
+                    # Do not reinvite user if their invitation is already pending
+                    if config_user.login in open_invitations:
+                        logging.info(
+                            "User '%s' shall be added to team '%s' as %s, invitation is pending",
+                            config_user.login,
+                            team.name,
+                            config_role,
+                        )
+                        continue
+
                     logging.info(
-                        "Adding '%s' to team '%s' as %s",
+                        "Adding user '%s' to team '%s' as %s",
                         config_user.login,
                         team.name,
                         config_role,

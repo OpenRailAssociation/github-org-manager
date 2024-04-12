@@ -43,10 +43,20 @@ def main():
         )
         sys.exit(1)
 
+    # Login to GitHub with token, get GitHub organisation
     org.login(cfg_org.get("org_name", ""), cfg_app.get("github_token", ""))
+    # Get current rate limit
+    org.ratelimit()
+
+    # Create teams that aren't present at Github yet
     org.create_missing_teams(dry=args.dry)
+    # Synchronise the team memberships
     org.sync_teams_members(dry=args.dry)
+    # Report about organisation members that do not belong to any team
     org.get_members_without_team()
+    # Synchronise the permissions of teams for all repositories
     org.sync_repo_permissions(dry=args.dry)
 
+    # Debug output
     logging.debug("Final dataclass:\n%s", org.df2json())
+    org.ratelimit()

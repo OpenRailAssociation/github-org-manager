@@ -41,6 +41,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         self.gh = Github(get_github_token(token))
         self.org = self.gh.get_organization(orgname)
 
+    def ratelimit(self):
+        """Get current rate limit"""
+        core = self.gh.get_rate_limit().core
+        logging.debug(
+            "Current rate limit: %s/%s (reset: %s)", core.remaining, core.limit, core.reset
+        )
+
     def df2json(self) -> str:
         """Convert the dataclass to a JSON string"""
         d = asdict(self)
@@ -133,6 +140,21 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return current_users
 
+    def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser.NamedUser | None:
+        """Turn a username into a proper GitHub user object"""
+        try:
+            gh_user: NamedUser.NamedUser = self.gh.get_user(username)  # type: ignore
+        except UnknownObjectException:
+            logging.error(
+                "The user '%s' configured as member of team '%s' does not "
+                "exist on GitHub. Spelling error or did they rename themselves?",
+                username,
+                teamname,
+            )
+            return None
+
+        return gh_user
+
     def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
         """Check the configured members of each team, add missing ones and delete unconfigured"""
         logging.debug("Starting to sync team members")
@@ -144,7 +166,14 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         open_invitations = [user.login for user in self.org.invitations()]
 
         for team, team_attrs in self.current_teams.items():
+            # Update current team members with dict[NamedUser, str (role)]
             team_attrs["members"] = self._get_current_team_members(team)
+
+            # For the rest of the function however, we use just the login name
+            # for each current user
+            current_team_members = {
+                user.login: role for user, role in team_attrs["members"].items()
+            }
 
             # Handle the team not being configured locally
             if team.name not in self.configured_teams:
@@ -163,50 +192,42 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
             # Analog to team_attrs["members"], add members and maintainers to shared
             # dict with respective role, while maintainer role dominates
-            configured_users: dict[NamedUser.NamedUser, str] = {}
+            configured_users: dict[str, str] = {}
             for config_role in ("member", "maintainer"):
                 team_members = self._get_configured_team_members(
                     team_configuration, team.name, config_role
                 )
                 for team_member in team_members:
-                    # Add user to dict, trying to find them on GitHub
-                    try:
-                        gh_user_obj: NamedUser.NamedUser = self.gh.get_user(
-                            team_member
-                        )  # type: ignore
-                        configured_users.update({gh_user_obj: config_role})
-                    except UnknownObjectException:
-                        logging.error(
-                            "The user '%s' configured as %s for the team '%s' does not "
-                            "exist on GitHub. Spelling error or did they rename themselves?",
-                            team_member,
-                            config_role,
-                            team.name,
-                        )
+                    # Add user with role to dict
+                    configured_users.update({team_member: config_role})
 
             # Consider all GitHub organisation team maintainers if they are member of the team
             # This is because GitHub API returns them as maintainers even if they are just members
             for user in self.org_owners:
-                if user in configured_users:
+                if user.login in configured_users:
                     logging.debug(
                         "Overriding role of organisation owner '%s' to maintainer", user.login
                     )
-                    configured_users[user] = "maintainer"
+                    configured_users[user.login] = "maintainer"
 
             # Only make edits to the team membership if the current state differs from config
-            if configured_users == team_attrs["members"]:
+            if configured_users == current_team_members:
                 logging.info("Team '%s' configuration is in sync, no changes", team.name)
                 continue
 
             # Loop through the configured users, add / update them if necessary
             for config_user, config_role in configured_users.items():
                 # Add user if they haven't been in the team yet
-                if config_user not in team_attrs["members"]:
+                if config_user not in current_team_members:
+                    # Turn user to GitHub object, trying to find them
+                    if not (gh_user := self._resolve_gh_username(config_user, team.name)):
+                        continue
+
                     # Do not reinvite user if their invitation is already pending
-                    if config_user.login in open_invitations:
+                    if config_user in open_invitations:
                         logging.info(
                             "User '%s' shall be added to team '%s' as %s, invitation is pending",
-                            config_user.login,
+                            gh_user.login,
                             team.name,
                             config_role,
                         )
@@ -214,40 +235,46 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
                     logging.info(
                         "Adding user '%s' to team '%s' as %s",
-                        config_user.login,
+                        gh_user.login,
                         team.name,
                         config_role,
                     )
                     if not dry:
-                        team.add_membership(member=config_user, role=config_role)
+                        team.add_membership(member=gh_user, role=config_role)
 
                 # Update roles if they differ from old role
-                elif config_role != team_attrs["members"].get(config_user, ""):
+                elif config_role != current_team_members.get(config_user, ""):
+                    # Turn user to GitHub object, trying to find them
+                    if not (gh_user := self._resolve_gh_username(config_user, team.name)):
+                        continue
                     logging.info(
                         "Updating role of '%s' in team '%s' to %s",
-                        config_user.login,
+                        config_user,
                         team.name,
                         config_role,
                     )
                     if not dry:
-                        team.add_membership(member=config_user, role=config_role)
+                        team.add_membership(member=gh_user, role=config_role)
 
             # Loop through all current members. Remove them if they are not configured
-            for current_user in team_attrs["members"]:
+            for current_user in current_team_members:
                 if current_user not in configured_users:
-                    if team.has_in_members(current_user):
+                    # Turn user to GitHub object, trying to find them
+                    if not (gh_user := self._resolve_gh_username(current_user, team.name)):
+                        continue
+                    if team.has_in_members(gh_user):
                         logging.info(
                             "Removing '%s' from team '%s' as they are not configured",
-                            current_user.login,
+                            gh_user.login,
                             team.name,
                         )
                         if not dry:
-                            team.remove_membership(current_user)
+                            team.remove_membership(gh_user)
                     else:
                         logging.debug(
                             "User '%s' does not need to be removed from team '%s' "
                             "as they are just member of a child-team",
-                            current_user.login,
+                            gh_user.login,
                             team.name,
                         )
 

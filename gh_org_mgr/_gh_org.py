@@ -41,6 +41,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         self.gh = Github(get_github_token(token))
         self.org = self.gh.get_organization(orgname)
 
+    def ratelimit(self):
+        """Get current rate limit"""
+        core = self.gh.get_rate_limit().core
+        logging.debug(
+            "Current rate limit: %s/%s (reset: %s)", core.remaining, core.limit, core.reset
+        )
+
     def df2json(self) -> str:
         """Convert the dataclass to a JSON string"""
         d = asdict(self)

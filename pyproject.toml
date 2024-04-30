@@ -42,3 +42,7 @@ line-length = 100
 # MYPY settings
 [tool.mypy]
 files = ["gh_org_mgr/*.py"]
+
+# Pylint
+[tool.pylint.'MESSAGES CONTROL']
+disable = "fixme"

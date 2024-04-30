@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 # GitHub Organization Manager
 
+[![REUSE status](https://api.reuse.software/badge/github.com/OpenRailAssociation/github-org-manager)](https://api.reuse.software/info/github.com/OpenRailAssociation/github-org-manager)
+
 A lightweight tool that helps with managing a GitHub organization, its members, teams, repository permissions and more.
 
 The basic principle: all settings reside in YAML configuration files which will be made effective during a run of this tool.

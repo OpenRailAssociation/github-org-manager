@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 DB Systel GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Manage a GitHub Organization, its teams, repository permissions, and more"""
 
 import argparse

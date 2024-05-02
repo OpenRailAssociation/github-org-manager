@@ -6,7 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # GitHub Organization Manager
 
+[![Test suites](https://github.com/OpenRailAssociation/github-org-manager/actions/workflows/test.yaml/badge.svg)](https://github.com/OpenRailAssociation/github-org-manager/actions/workflows/test.yaml)
 [![REUSE status](https://api.reuse.software/badge/github.com/OpenRailAssociation/github-org-manager)](https://api.reuse.software/info/github.com/OpenRailAssociation/github-org-manager)
+[![The latest version of GitHub Org Manager can be found on PyPI.](https://img.shields.io/pypi/v/github-org-manager.svg)](https://pypi.org/project/github-org-manager/)
+[![Information on what versions of Python GitHub Org Manager supports can be found on PyPI.](https://img.shields.io/pypi/pyversions/github-org-manager.svg)](https://pypi.org/project/github-org-manager/)
 
 A lightweight tool that helps with managing a GitHub organization, its members, teams, repository permissions and more.
 

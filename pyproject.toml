@@ -4,7 +4,7 @@
 
 [tool.poetry]
 name = "github-org-manager"
-version = "0.1.0"
+version = "0.2.0"
 description = "Manage a GitHub Organization, its teams, repository permissions, and more"
 authors = ["Max Mehl <max.mehl@deutschebahn.com>"]
 readme = "README.md"
@@ -17,7 +17,6 @@ gh-org-mgr = 'gh_org_mgr.manage:main'
 python = "^3.10"
 pygithub = "^2.3.0"
 pyyaml = "^6.0.1"
-tqdm = "^4.66.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
@@ -25,7 +24,6 @@ isort = "^5.13.2"
 mypy = "^1.9.0"
 pylint = "^3.1.0"
 types-pyyaml = "^6.0.12.20240311"
-types-tqdm = "^4.66.0.20240106"
 
 [build-system]
 requires = ["poetry-core"]

@@ -8,7 +8,19 @@ version = "0.2.0"
 description = "Manage a GitHub Organization, its teams, repository permissions, and more"
 authors = ["Max Mehl <max.mehl@deutschebahn.com>"]
 readme = "README.md"
-packages = [{include = "gh_org_mgr"}]
+license = "Apache-2.0"
+repository = "https://github.com/OpenRailAssociation/openrail-org-config"
+keywords = ["github", "github-management", "permissions", "access-control"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Topic :: Software Development :: Version Control :: Git",
+  "Topic :: Utilities",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+]
+packages = [{ include = "gh_org_mgr" }]
 
 [tool.poetry.scripts]
 gh-org-mgr = 'gh_org_mgr.manage:main'

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 DB Systel GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Class for the GitHub organization which contains most of the logic"""
 
 import logging

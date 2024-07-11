@@ -30,6 +30,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     current_teams: dict[Team.Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
     current_repos: dict[Repository.Repository, dict[Team.Team, str]] = field(default_factory=dict)
+    configured_repos: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository.Repository] = field(default_factory=list)
 
     # --------------------------------------------------------------------------
@@ -308,6 +309,41 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Repos
     # --------------------------------------------------------------------------
+    def _aggregate_lists(self, *lists: list[str | int]) -> list[str | int]:
+        """Combine multiple lists into one while removing duplicates"""
+        complete = []
+        for single_list in lists:
+            complete.extend(single_list)
+
+        return list(set(complete))
+
+    def get_configured_repos_and_perms(self):
+        """
+        Get a list of repos with a list of individuals and their permissions,
+        based on their team memberships
+        """
+        for _, team_attrs in self.configured_teams.items():
+            for repo, perms in team_attrs.get("repos", {}).items():
+                # Create repo if non-exist
+                if repo not in self.configured_repos:
+                    self.configured_repos[repo] = {}
+
+                # Get team maintainers and members
+                team_members = self._aggregate_lists(
+                    team_attrs.get("maintainer", []), team_attrs.get("member", [])
+                )
+
+                # Add team member to repo with their repo permissions
+                for team_member in team_members:
+                    # Check if permissions already exist
+                    # TODO: evaluate highest permissions for this member
+                    if self.configured_repos[repo].get(team_member, {}):
+                        logging.debug(
+                            "Permissions for %s on %s already exist: %s", team_member, repo, perms
+                        )
+                    else:
+                        self.configured_repos[repo][team_member] = perms
+
     def _get_current_repos_and_perms(self, ignore_archived: bool) -> None:
         """Get all repos, their current teams and their permissions"""
         for repo in list(self.org.get_repos()):

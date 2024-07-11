@@ -30,6 +30,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     current_teams: dict[Team.Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
     current_repos: dict[Repository.Repository, dict[Team.Team, str]] = field(default_factory=dict)
+    archived_repos: list[Repository.Repository] = field(default_factory=list)
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -307,9 +308,18 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Repos
     # --------------------------------------------------------------------------
-    def _get_current_repos_and_perms(self) -> None:
+    def _get_current_repos_and_perms(self, ignore_archived: bool) -> None:
         """Get all repos, their current teams and their permissions"""
         for repo in list(self.org.get_repos()):
+            # Check if repo is archived. If so, ignore it, if user requested so
+            if ignore_archived and repo.archived:
+                logging.debug(
+                    "Ignoring %s as it is archived and user requested to ignore such repos",
+                    repo.name,
+                )
+                self.archived_repos.append(repo)
+                continue
+
             self.current_repos[repo] = {}
             for team in list(repo.get_teams()):
                 self.current_repos[repo][team] = team.permission
@@ -349,12 +359,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return team_changelist
 
-    def sync_repo_permissions(self, dry: bool = False) -> None:
+    def sync_repo_permissions(self, dry: bool = False, ignore_archived: bool = False) -> None:
         """Synchronise the repository permissions of all teams"""
         logging.debug("Starting to sync repo/team permissions")
 
         # Get all repos and their current permissions from GitHub
-        self._get_current_repos_and_perms()
+        self._get_current_repos_and_perms(ignore_archived)
 
         # Find differences between configured permissions for a team's repo and the current state
         for team, repos in self._create_perms_changelist_for_teams().items():

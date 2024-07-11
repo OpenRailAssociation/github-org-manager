@@ -23,6 +23,12 @@ parser.add_argument(
 )
 parser.add_argument("--debug", action="store_true", help="Get verbose logging output")
 parser.add_argument("--dry", action="store_true", help="Do not make any changes at GitHub")
+parser.add_argument(
+    "-A",
+    "--ignore-archived",
+    action="store_true",
+    help="Do not take any action in ignored repositories",
+)
 parser.add_argument("--version", action="version", version="GitHub Team Manager " + __version__)
 
 
@@ -59,7 +65,7 @@ def main():
     # Report about organisation members that do not belong to any team
     org.get_members_without_team()
     # Synchronise the permissions of teams for all repositories
-    org.sync_repo_permissions(dry=args.dry)
+    org.sync_repo_permissions(dry=args.dry, ignore_archived=args.ignore_archived)
 
     # Debug output
     logging.debug("Final dataclass:\n%s", org.df2json())

@@ -497,10 +497,15 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 "Checking for repository permissions of %s's parent team %s", team_name, parent
             )
             parent_team_dict = self.configured_teams[parent]
+
+            # Handle empty parent dict
+            if not parent_team_dict:
+                break
+
+            # Get repo permissions and potential parent, and add it
             repo_perm, parent = self._get_direct_repo_permissions_of_team(
                 team_dict=parent_team_dict
             )
-
             for repo, perm in repo_perm.items():
                 # Add (highest) repo permission
                 all_repo_perms[repo] = self._get_highest_permission(
@@ -640,6 +645,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         def get_rank(permission):
             return perms_ranking.index(permission) if permission in perms_ranking else 99
+
         rank_permission1 = get_rank(permission1)
         rank_permission2 = get_rank(permission2)
 

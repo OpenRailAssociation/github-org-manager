@@ -442,7 +442,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return ""
 
-    def get_configured_repos_and_user_perms(self):
+    def _get_configured_repos_and_user_perms(self):
         """
         Get a list of repos with a list of individuals and their permissions,
         based on their team memberships
@@ -484,7 +484,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         perm_conversion = {
             "READ": "pull",
             "TRIAGE": "triage",
-            "WRITE": "write",
+            "WRITE": "push",
             "MAINTAIN": "maintain",
             "ADMIN": "admin",
         }
@@ -545,7 +545,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
             self.current_repos_collaborators[repo][login] = permission
 
-    def get_current_repos_and_user_perms(self):
+    def _get_current_repos_and_user_perms(self):
         """Get all repos, their current collaborators and their permissions"""
         # We copy the list of repos from self.current_repos_teams
         for repo in self.current_repos_teams:
@@ -554,3 +554,46 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for repo in self.current_repos_collaborators:
             # Get users for this repo
             self._fetch_collaborators_of_repo(repo)
+
+    def sync_repo_collaborator_permissions(self, dry: bool = False):
+        """Compare the configured with the current repo permissions for all
+        repositories' collaborators"""
+        # Collect info about all repos, their configured collaborators (through
+        # team membership) and the current state (either through team membership
+        # or individual).
+        # The resulting structure is:
+        # - configured_repos_collaborators: dict[reponame, dict[username, permission]]
+        # - current_repos_collaborators: dict[reponame, dict[username, permission]]
+        self._get_configured_repos_and_user_perms()
+        self._get_current_repos_and_user_perms()
+
+        # Loop over all factually existing repositories. This will be a one-way
+        # sync. Team permissions have been set before, we are now removing
+        # surplus permissions. As no individual permissions are allowed, these
+        # will be fully revoked.
+        for repo, current_repo_perms in self.current_repos_collaborators.items():
+            repo_obj: Repository.Repository | None = None
+            for username, current_perm in current_repo_perms.items():
+                # Get configured user permissions for this repo
+                try:
+                    config_perm = self.configured_repos_collaborators[repo][username]
+                # There is no configured permission for this user in this repo
+                except KeyError:
+                    config_perm = None
+
+                if current_perm != config_perm:
+                    logging.info(
+                        "Remove %s from %s. They have '%s' there but should only have '%s'.",
+                        username,
+                        repo,
+                        current_perm,
+                        config_perm,
+                    )
+                    # Initiate proper repository object if action needs to be taken
+                    # TODO: Make this unecessary by using the already existing repo objects before
+                    if repo_obj is None:
+                        repo_obj = self.org.get_repo(repo)
+
+                    # Remove collaborator
+                    if not dry:
+                        repo_obj.remove_from_collaborators(username)

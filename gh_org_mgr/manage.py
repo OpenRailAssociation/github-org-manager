@@ -66,6 +66,9 @@ def main():
     org.get_members_without_team()
     # Synchronise the permissions of teams for all repositories
     org.sync_repo_permissions(dry=args.dry, ignore_archived=args.ignore_archived)
+    # Remove individual collaborator permissions if they are higher than the one
+    # from team membership (or if they are in no configured team at all)
+    org.sync_repo_collaborator_permissions(dry=args.dry)
 
     # Debug output
     logging.debug("Final dataclass:\n%s", org.df2json())

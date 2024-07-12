@@ -7,16 +7,13 @@
 import logging
 from dataclasses import asdict, dataclass, field
 
-from github import (
-    Github,
-    NamedUser,
-    Organization,
-    Repository,
-    Team,
-    UnknownObjectException,
-)
+from github import Github, UnknownObjectException
+from github.NamedUser import NamedUser
+from github.Organization import Organization
+from github.Repository import Repository
+from github.Team import Team
 
-from ._gh_api import get_github_token
+from ._gh_api import get_github_token, run_graphql_query
 
 
 @dataclass
@@ -24,13 +21,17 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     """Dataclass holding GH organization data and functions"""
 
     gh: Github = None  # type: ignore
-    org: Organization.Organization = None  # type: ignore
-    org_owners: list[NamedUser.NamedUser] = field(default_factory=list)
-    org_members: list[NamedUser.NamedUser] = field(default_factory=list)
-    current_teams: dict[Team.Team, dict] = field(default_factory=dict)
+    org: Organization = None  # type: ignore
+    gh_token: str = ""
+    org_owners: list[NamedUser] = field(default_factory=list)
+    org_members: list[NamedUser] = field(default_factory=list)
+    current_teams: dict[Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
-    current_repos: dict[Repository.Repository, dict[Team.Team, str]] = field(default_factory=dict)
-    archived_repos: list[Repository.Repository] = field(default_factory=list)
+    current_repos_teams: dict[Repository, dict[Team, str]] = field(default_factory=dict)
+    current_repos_collaborators: dict[Repository, dict[str, str]] = field(default_factory=dict)
+    configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
+    archived_repos: list[Repository] = field(default_factory=list)
+    unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -43,7 +44,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def login(self, orgname: str, token: str):
         """Login to GH, gather org data"""
-        self.gh = Github(get_github_token(token))
+        self.gh_token = get_github_token(token)
+        self.gh = Github(self.gh_token)
         self.org = self.gh.get_organization(orgname)
 
     def ratelimit(self):
@@ -133,10 +135,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         logging.debug("Team '%s' has no configured %ss", team_name, role)
         return []
 
-    def _get_current_team_members(self, team: Team.Team) -> dict[NamedUser.NamedUser, str]:
+    def _get_current_team_members(self, team: Team) -> dict[NamedUser, str]:
         """Return dict of current users with their respective roles. Also
         contains members of child teams"""
-        current_users: dict[NamedUser.NamedUser, str] = {}
+        current_users: dict[NamedUser, str] = {}
         for role in ("member", "maintainer"):
             # Make a two-step check whether person is actually in team, as
             # get_members() also return child-team members
@@ -145,10 +147,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return current_users
 
-    def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser.NamedUser | None:
+    def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
         """Turn a username into a proper GitHub user object"""
         try:
-            gh_user: NamedUser.NamedUser = self.gh.get_user(username)  # type: ignore
+            gh_user: NamedUser = self.gh.get_user(username)  # type: ignore
         except UnknownObjectException:
             logging.error(
                 "The user '%s' configured as member of team '%s' does not "
@@ -308,7 +310,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Repos
     # --------------------------------------------------------------------------
-    def _get_current_repos_and_perms(self, ignore_archived: bool) -> None:
+    def _get_current_repos_and_team_perms(self, ignore_archived: bool) -> None:
         """Get all repos, their current teams and their permissions"""
         for repo in list(self.org.get_repos()):
             # Check if repo is archived. If so, ignore it, if user requested so
@@ -320,15 +322,15 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 self.archived_repos.append(repo)
                 continue
 
-            self.current_repos[repo] = {}
+            self.current_repos_teams[repo] = {}
             for team in list(repo.get_teams()):
-                self.current_repos[repo][team] = team.permission
+                self.current_repos_teams[repo][team] = team.permission
 
     def _create_perms_changelist_for_teams(
         self,
-    ) -> dict[Team.Team, dict[Repository.Repository, str]]:
+    ) -> dict[Team, dict[Repository, str]]:
         """Create a permission/repo changelist from the perspective of configured teams"""
-        team_changelist: dict[Team.Team, dict[Repository.Repository, str]] = {}
+        team_changelist: dict[Team, dict[Repository, str]] = {}
         for team_name, team_attrs in self.configured_teams.items():
             # Handle unset configured attributes
             if team_attrs is None:
@@ -351,7 +353,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     )
                     continue
 
-                if perm != self.current_repos[repo].get(team):
+                if perm != self.current_repos_teams[repo].get(team):
                     # Add the changeset to the changelist
                     if team not in team_changelist:
                         team_changelist[team] = {}
@@ -359,12 +361,41 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return team_changelist
 
+    def _document_unconfigured_team_repo_permissions(
+        self, team: Team, team_permission: str, repo_name: str
+    ) -> None:
+        """Create a record of all members of a team and their permissions on a
+        repo due to being member of an unconfigured team"""
+        users_of_unconfigured_team: dict[NamedUser, str] = self.current_teams[team].get(
+            "members"
+        )  # type: ignore
+        # Initiate this repo in the dict as dict if not present
+        if repo_name not in self.unconfigured_team_repo_permissions:
+            self.unconfigured_team_repo_permissions[repo_name] = {}
+        # Add actual permission for each user of this unconfigured team
+        for user in users_of_unconfigured_team:
+            # Handle if another, potentially higher permission is already set by
+            # membership in another team
+            if exist_perm := self.unconfigured_team_repo_permissions[repo_name].get(user.login, ""):
+                logging.debug(
+                    "Permissions for %s on %s already exist: %s. "
+                    "Checking whether new permission is higher.",
+                    user.login,
+                    repo_name,
+                    exist_perm,
+                )
+                self.unconfigured_team_repo_permissions[repo_name][user.login] = (
+                    self._get_highest_permission(exist_perm, team_permission)
+                )
+            else:
+                self.unconfigured_team_repo_permissions[repo_name][user.login] = team_permission
+
     def sync_repo_permissions(self, dry: bool = False, ignore_archived: bool = False) -> None:
         """Synchronise the repository permissions of all teams"""
         logging.debug("Starting to sync repo/team permissions")
 
         # Get all repos and their current permissions from GitHub
-        self._get_current_repos_and_perms(ignore_archived)
+        self._get_current_repos_and_team_perms(ignore_archived)
 
         # Find differences between configured permissions for a team's repo and the current state
         for team, repos in self._create_perms_changelist_for_teams().items():
@@ -381,7 +412,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         # Find out whether repos' permissions contain *configured* teams that
         # should not have permissions
-        for repo, teams in self.current_repos.items():
+        for repo, teams in self.current_repos_teams.items():
             for team in teams:
                 # Get configured repos for this team, finding out whether repo
                 # is configured for this team
@@ -394,6 +425,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                         team.name,
                         repo.name,
                     )
+                    # Store information about these team members and their
+                    # permissions on the repo. We will use it later in the
+                    # collaborators step
+                    self._document_unconfigured_team_repo_permissions(
+                        team=team, team_permission=teams[team], repo_name=repo.name
+                    )
+                    # Abort handling the repo sync as we don't touch unconfigured teams
                     continue
                 # Handle: Team is configured, but contains no config
                 if self.configured_teams[team.name] is None:
@@ -413,3 +451,203 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     logging.info("Removing team '%s' from repository '%s'", team.name, repo.name)
                     if not dry:
                         team.remove_from_repos(repo)
+
+    # --------------------------------------------------------------------------
+    # Collaborators
+    # --------------------------------------------------------------------------
+    def _aggregate_lists(self, *lists: list[str | int]) -> list[str | int]:
+        """Combine multiple lists into one while removing duplicates"""
+        complete = []
+        for single_list in lists:
+            complete.extend(single_list)
+
+        return list(set(complete))
+
+    def _get_highest_permission(self, *permissions: str) -> str:
+        """Get the highest GitHub repo permissions out of multiple permissions"""
+        perms_ranking = ["admin", "maintain", "push", "triage", "pull"]
+        for perm in perms_ranking:
+            # If e.g. "maintain" matches one of the two permissions
+            if perm in permissions:
+                logging.debug("%s is the highest permission", perm)
+                return perm
+
+        return ""
+
+    def _get_configured_repos_and_user_perms(self):
+        """
+        Get a list of repos with a list of individuals and their permissions,
+        based on their team memberships
+        """
+        for _, team_attrs in self.configured_teams.items():
+            for repo, perm in team_attrs.get("repos", {}).items():
+                # Create repo if non-exist
+                if repo not in self.configured_repos_collaborators:
+                    self.configured_repos_collaborators[repo] = {}
+
+                # Get team maintainers and members
+                team_members = self._aggregate_lists(
+                    team_attrs.get("maintainer", []), team_attrs.get("member", [])
+                )
+
+                # Add team member to repo with their repo permissions
+                for team_member in team_members:
+                    # Check if permissions already exist
+                    if self.configured_repos_collaborators[repo].get(team_member, {}):
+                        logging.debug(
+                            "Permissions for %s on %s already exist: %s. "
+                            "Checking whether new permission is higher.",
+                            team_member,
+                            repo,
+                            self.configured_repos_collaborators[repo][team_member],
+                        )
+                        self.configured_repos_collaborators[repo][team_member] = (
+                            self._get_highest_permission(
+                                perm, self.configured_repos_collaborators[repo][team_member]
+                            )
+                        )
+                    else:
+                        self.configured_repos_collaborators[repo][team_member] = perm
+
+    def _convert_graphql_perm_to_rest(self, permission: str) -> str:
+        """Convert a repo permission coming from the GraphQL API to the ones
+        coming from the REST API"""
+        perm_conversion = {
+            "READ": "pull",
+            "TRIAGE": "triage",
+            "WRITE": "push",
+            "MAINTAIN": "maintain",
+            "ADMIN": "admin",
+        }
+        if permission in perm_conversion:
+            replacement = perm_conversion.get(permission, "")
+            return replacement
+
+        return permission
+
+    def _fetch_collaborators_of_repo(self, repo: Repository):
+        """Get all collaborators (individuals) of a GitHub repo with their
+        permissions using the GraphQL API"""
+        query = """
+            query($owner: String!, $name: String!, $cursor: String) {
+            repository(owner: $owner, name: $name) {
+                collaborators(first: 20, after: $cursor) {
+                edges {
+                    node {
+                        login
+                    }
+                    permission
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                }
+                }
+            }
+        }
+        """
+
+        # Initial query parameters
+        variables = {"owner": self.org.login, "name": repo.name, "cursor": None}
+
+        collaborators = []
+        has_next_page = True
+
+        while has_next_page:
+            result = run_graphql_query(query, variables, self.gh_token)
+            try:
+                collaborators.extend(result["data"]["repository"]["collaborators"]["edges"])
+                has_next_page = result["data"]["repository"]["collaborators"]["pageInfo"][
+                    "hasNextPage"
+                ]
+                variables["cursor"] = result["data"]["repository"]["collaborators"]["pageInfo"][
+                    "endCursor"
+                ]
+            except (TypeError, KeyError):
+                logging.debug("Repo %s does not seem to have any collaborators", repo.name)
+                continue
+
+        # Extract relevant data
+        for collaborator in collaborators:
+            login = collaborator["node"]["login"]
+            # Skip entry if collaborator is org owner, which is "admin" anyway
+            if login in [user.login for user in self.org_owners]:
+                continue
+            permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
+            self.current_repos_collaborators[repo][login] = permission
+
+    def _get_current_repos_and_user_perms(self):
+        """Get all repos, their current collaborators and their permissions"""
+        # We copy the list of repos from self.current_repos_teams
+        for repo in self.current_repos_teams:
+            self.current_repos_collaborators[repo] = {}
+
+        for repo in self.current_repos_collaborators:
+            # Get users for this repo
+            self._fetch_collaborators_of_repo(repo)
+
+    def sync_repo_collaborator_permissions(self, dry: bool = False):
+        """Compare the configured with the current repo permissions for all
+        repositories' collaborators"""
+        # Collect info about all repos, their configured collaborators (through
+        # team membership) and the current state (either through team membership
+        # or individual).
+        # The resulting structure is:
+        # - configured_repos_collaborators: dict[Repository, dict[username, permission]]
+        # - current_repos_collaborators: dict[Repository, dict[username, permission]]
+        self._get_configured_repos_and_user_perms()
+        self._get_current_repos_and_user_perms()
+
+        # Loop over all factually existing repositories. This will be a one-way
+        # sync. Team permissions have been set before, we are now removing
+        # surplus permissions. As no individual permissions are allowed, these
+        # will be fully revoked.
+        for repo, current_repo_perms in self.current_repos_collaborators.items():
+            for username, current_perm in current_repo_perms.items():
+                # Get configured user permissions for this repo
+                try:
+                    config_perm = self.configured_repos_collaborators[repo.name][username]
+                # There is no configured permission for this user in this repo
+                except KeyError:
+                    config_perm = ""
+
+                if current_perm != config_perm:
+                    # Find out whether user has these unconfigured permissions
+                    # due to being member of an unconfigured team. Check whether
+                    # these are the same permissions as the team would get them.
+                    unconfigured_team_repo_permission = self.unconfigured_team_repo_permissions.get(
+                        repo.name, {}
+                    ).get(username, "")
+                    if unconfigured_team_repo_permission:
+                        if current_perm == unconfigured_team_repo_permission:
+                            logging.info(
+                                "User %s has '%s' permission on repo '%s' due to being member of "
+                                "an unconfigured team, and this matches their current permission. "
+                                "Will not make any changes therefore.",
+                                username,
+                                current_perm,
+                                repo.name,
+                            )
+                            continue
+
+                        logging.info(
+                            "User %s should have '%s' permissions on repo '%s' due to being member "
+                            "of an unconfigured team, but their current permission on the "
+                            "repo is '%s'. Removing them from collaborators therefore.",
+                            username,
+                            unconfigured_team_repo_permission,
+                            repo.name,
+                            current_perm,
+                        )
+
+                    logging.info(
+                        "Remove %s from %s. They have '%s' there but should only have '%s'.",
+                        username,
+                        repo.name,
+                        current_perm,
+                        config_perm,
+                    )
+
+                    # Remove collaborator
+                    if not dry:
+                        repo.remove_from_collaborators(username)

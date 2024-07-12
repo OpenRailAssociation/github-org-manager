@@ -309,59 +309,6 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Repos
     # --------------------------------------------------------------------------
-    def _aggregate_lists(self, *lists: list[str | int]) -> list[str | int]:
-        """Combine multiple lists into one while removing duplicates"""
-        complete = []
-        for single_list in lists:
-            complete.extend(single_list)
-
-        return list(set(complete))
-
-    def get_highest_permission(self, *permissions: str) -> str:
-        """Get the highest GitHub repo permissions out of multiple permissions"""
-        perms_ranking = ["admin", "maintain", "push", "triage", "pull"]
-        for perm in perms_ranking:
-            # If e.g. "maintain" matches one of the two permissions
-            if perm in permissions:
-                logging.debug("%s is the highest permission", perm)
-                return perm
-
-        return ""
-
-    def get_configured_repos_and_user_perms(self):
-        """
-        Get a list of repos with a list of individuals and their permissions,
-        based on their team memberships
-        """
-        for _, team_attrs in self.configured_teams.items():
-            for repo, perm in team_attrs.get("repos", {}).items():
-                # Create repo if non-exist
-                if repo not in self.configured_repos:
-                    self.configured_repos[repo] = {}
-
-                # Get team maintainers and members
-                team_members = self._aggregate_lists(
-                    team_attrs.get("maintainer", []), team_attrs.get("member", [])
-                )
-
-                # Add team member to repo with their repo permissions
-                for team_member in team_members:
-                    # Check if permissions already exist
-                    # TODO: evaluate highest permissions for this member
-                    if self.configured_repos[repo].get(team_member, {}):
-                        logging.debug(
-                            "Permissions for %s on %s already exist: %s. "
-                            "Checking whether new permissions is higher.",
-                            team_member,
-                            repo,
-                            self.configured_repos[repo][team_member],
-                        )
-                        self.configured_repos[repo][team_member] = self.get_highest_permission(
-                            perm, self.configured_repos[repo][team_member]
-                        )
-                    else:
-                        self.configured_repos[repo][team_member] = perm
-
     def _get_current_repos_and_team_perms(self, ignore_archived: bool) -> None:
         """Get all repos, their current teams and their permissions"""
         for repo in list(self.org.get_repos()):
@@ -467,3 +414,59 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     logging.info("Removing team '%s' from repository '%s'", team.name, repo.name)
                     if not dry:
                         team.remove_from_repos(repo)
+
+    # --------------------------------------------------------------------------
+    # Collaborators
+    # --------------------------------------------------------------------------
+    def _aggregate_lists(self, *lists: list[str | int]) -> list[str | int]:
+        """Combine multiple lists into one while removing duplicates"""
+        complete = []
+        for single_list in lists:
+            complete.extend(single_list)
+
+        return list(set(complete))
+
+    def _get_highest_permission(self, *permissions: str) -> str:
+        """Get the highest GitHub repo permissions out of multiple permissions"""
+        perms_ranking = ["admin", "maintain", "push", "triage", "pull"]
+        for perm in perms_ranking:
+            # If e.g. "maintain" matches one of the two permissions
+            if perm in permissions:
+                logging.debug("%s is the highest permission", perm)
+                return perm
+
+        return ""
+
+    def get_configured_repos_and_user_perms(self):
+        """
+        Get a list of repos with a list of individuals and their permissions,
+        based on their team memberships
+        """
+        for _, team_attrs in self.configured_teams.items():
+            for repo, perm in team_attrs.get("repos", {}).items():
+                # Create repo if non-exist
+                if repo not in self.configured_repos:
+                    self.configured_repos[repo] = {}
+
+                # Get team maintainers and members
+                team_members = self._aggregate_lists(
+                    team_attrs.get("maintainer", []), team_attrs.get("member", [])
+                )
+
+                # Add team member to repo with their repo permissions
+                for team_member in team_members:
+                    # Check if permissions already exist
+                    # TODO: evaluate highest permissions for this member
+                    if self.configured_repos[repo].get(team_member, {}):
+                        logging.debug(
+                            "Permissions for %s on %s already exist: %s. "
+                            "Checking whether new permissions is higher.",
+                            team_member,
+                            repo,
+                            self.configured_repos[repo][team_member],
+                        )
+                        self.configured_repos[repo][team_member] = self._get_highest_permission(
+                            perm, self.configured_repos[repo][team_member]
+                        )
+                    else:
+                        self.configured_repos[repo][team_member] = perm

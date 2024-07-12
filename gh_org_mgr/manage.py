@@ -64,10 +64,10 @@ def main():
     org.sync_teams_members(dry=args.dry)
     # Report about organisation members that do not belong to any team
     org.get_members_without_team()
-    # Handle collaborators
-    org.get_configured_repos_and_user_perms()
     # Synchronise the permissions of teams for all repositories
     org.sync_repo_permissions(dry=args.dry, ignore_archived=args.ignore_archived)
+    # Handle collaborators
+    org.get_configured_repos_and_user_perms()
 
     # Debug output
     logging.debug("Final dataclass:\n%s", org.df2json())

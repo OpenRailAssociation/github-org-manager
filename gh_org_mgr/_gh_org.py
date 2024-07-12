@@ -36,6 +36,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     current_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository.Repository] = field(default_factory=list)
+    unconfigured_team_repo_permissions: dict[str, dict[Team.Team, str]] = field(
+        default_factory=dict
+    )
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -365,6 +368,24 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return team_changelist
 
+    def _document_unconfigured_team_repo_permissions(
+        self, team: Team.Team, team_permissions: str, repo_name: str
+    ) -> None:
+        """Create a record of all members of a team and their permissions on a
+        repo due to being member of an unconfigured team"""
+        users_of_unconfigured_team: dict[NamedUser.NamedUser, str] = self.current_teams[team].get(
+            "members"
+        )
+        # Initiate this repo in the dict as dict if not present
+        if repo_name not in self.unconfigured_team_repo_permissions:
+            self.unconfigured_team_repo_permissions[repo_name] = {}
+        # Add actual permission for each user of this unconfigured team
+        for user in users_of_unconfigured_team:
+            self.unconfigured_team_repo_permissions[repo_name][user.login] = team_permissions
+
+        # TODO: Deal with already existent permission, and take highest
+        # permission. Can happen due to being member of another team
+
     def sync_repo_permissions(self, dry: bool = False, ignore_archived: bool = False) -> None:
         """Synchronise the repository permissions of all teams"""
         logging.debug("Starting to sync repo/team permissions")
@@ -400,6 +421,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                         team.name,
                         repo.name,
                     )
+                    # Store information about these team members and their
+                    # permissions on the repo. We will use it later in the
+                    # collaborators step
+                    self._document_unconfigured_team_repo_permissions(
+                        team=team, team_permissions=teams[team], repo_name=repo.name
+                    )
+                    # Abort handling the repo sync as we don't touch unconfigured teams
                     continue
                 # Handle: Team is configured, but contains no config
                 if self.configured_teams[team.name] is None:
@@ -582,6 +610,29 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     config_perm = None
 
                 if current_perm != config_perm:
+                    # Find out whether user has these unconfigured permissions
+                    # due to being member of an unconfigured team. Check whether
+                    # these are the same permissions as the team would get them.
+                    unconfigured_team_repo_permission = self.unconfigured_team_repo_permissions.get(
+                        repo, {}
+                    ).get(username, "")
+                    if unconfigured_team_repo_permission:
+                        if current_perm == unconfigured_team_repo_permission:
+                            logging.info(
+                                "User %s has '%s' permission on repo '%s' due to being member of "
+                                "an unconfigured team, and this matches their current permission. "
+                                "Will not make any changes therefore.",
+                                username, current_perm, repo
+                            )
+                            continue
+
+                        logging.info(
+                            "User %s should have '%s' permissions on repo '%s' due to being member "
+                            "of an unconfigured team, but their current permission on the "
+                            "repo is '%s'. Removing them from collaborators therefore.",
+                            username, unconfigured_team_repo_permission, repo, current_perm
+                        )
+
                     logging.info(
                         "Remove %s from %s. They have '%s' there but should only have '%s'.",
                         username,

@@ -60,6 +60,18 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """Convert the dataclass to a JSON string"""
         d = asdict(self)
 
+        # Censor sensible fields
+        def censor_half_string(string: str) -> str:
+            """Censor 50% of a string (rounded up)"""
+            half1 = int(len(string) / 2)
+            half2 = len(string) - half1
+            return string[:half1] + "*" * (half2)
+
+        sensible_keys = ["gh_token"]
+        for key in sensible_keys:
+            d[key] = censor_half_string(d.get(key, ""))
+
+        # Print dict nicely
         def pretty(d, indent=0):
             string = ""
             for key, value in d.items():

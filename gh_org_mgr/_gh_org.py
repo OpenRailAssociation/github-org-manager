@@ -609,7 +609,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     config_perm = self.configured_repos_collaborators[repo.name][username]
                 # There is no configured permission for this user in this repo
                 except KeyError:
-                    config_perm = None
+                    config_perm = ""
 
                 if current_perm != config_perm:
                     # Find out whether user has these unconfigured permissions

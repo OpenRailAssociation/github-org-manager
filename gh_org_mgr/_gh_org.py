@@ -328,7 +328,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return ""
 
-    def get_configured_repos_and_perms(self):
+    def get_configured_repos_and_user_perms(self):
         """
         Get a list of repos with a list of individuals and their permissions,
         based on their team memberships
@@ -362,7 +362,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     else:
                         self.configured_repos[repo][team_member] = perm
 
-    def _get_current_repos_and_perms(self, ignore_archived: bool) -> None:
+    def _get_current_repos_and_team_perms(self, ignore_archived: bool) -> None:
         """Get all repos, their current teams and their permissions"""
         for repo in list(self.org.get_repos()):
             # Check if repo is archived. If so, ignore it, if user requested so
@@ -418,7 +418,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         logging.debug("Starting to sync repo/team permissions")
 
         # Get all repos and their current permissions from GitHub
-        self._get_current_repos_and_perms(ignore_archived)
+        self._get_current_repos_and_team_perms(ignore_archived)
 
         # Find differences between configured permissions for a team's repo and the current state
         for team, repos in self._create_perms_changelist_for_teams().items():

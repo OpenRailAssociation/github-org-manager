@@ -68,6 +68,7 @@ def main():
     org.sync_repo_permissions(dry=args.dry, ignore_archived=args.ignore_archived)
     # Handle collaborators
     org.get_configured_repos_and_user_perms()
+    org.get_current_repos_and_user_perms()
 
     # Debug output
     logging.debug("Final dataclass:\n%s", org.df2json())

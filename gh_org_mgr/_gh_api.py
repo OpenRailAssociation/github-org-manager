@@ -10,6 +10,8 @@ import logging
 import os
 import sys
 
+import requests
+
 
 def get_github_token(token: str = "") -> str:
     """Get the GitHub token from config or environment, while environment overrides"""
@@ -25,3 +27,19 @@ def get_github_token(token: str = "") -> str:
         )
 
     return token
+
+
+# Function to execute GraphQL query
+def run_graphql_query(query, variables, token):
+    """Run a query against the GitHub GraphQL API"""
+    headers = {"Authorization": f"Bearer {token}"}
+    request = requests.post(
+        "https://api.github.com/graphql",
+        json={"query": query, "variables": variables},
+        headers=headers,
+        timeout=10,
+    )
+    if request.status_code == 200:
+        return request.json()
+
+    sys.exit(f"Query failed to run by returning code of {query}: {request.status_code}")

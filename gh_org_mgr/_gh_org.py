@@ -16,7 +16,7 @@ from github import (
     UnknownObjectException,
 )
 
-from ._gh_api import get_github_token
+from ._gh_api import get_github_token, run_graphql_query
 
 
 @dataclass
@@ -25,12 +25,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     gh: Github = None  # type: ignore
     org: Organization.Organization = None  # type: ignore
+    gh_token: str = ""
     org_owners: list[NamedUser.NamedUser] = field(default_factory=list)
     org_members: list[NamedUser.NamedUser] = field(default_factory=list)
     current_teams: dict[Team.Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
-    current_repos: dict[Repository.Repository, dict[Team.Team, str]] = field(default_factory=dict)
-    configured_repos: dict[str, dict[str, str]] = field(default_factory=dict)
+    current_repos_teams: dict[Repository.Repository, dict[Team.Team, str]] = field(
+        default_factory=dict
+    )
+    current_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
+    configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository.Repository] = field(default_factory=list)
 
     # --------------------------------------------------------------------------
@@ -44,7 +48,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def login(self, orgname: str, token: str):
         """Login to GH, gather org data"""
-        self.gh = Github(get_github_token(token))
+        self.gh_token = get_github_token(token)
+        self.gh = Github(self.gh_token)
         self.org = self.gh.get_organization(orgname)
 
     def ratelimit(self):
@@ -321,9 +326,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 self.archived_repos.append(repo)
                 continue
 
-            self.current_repos[repo] = {}
+            self.current_repos_teams[repo] = {}
             for team in list(repo.get_teams()):
-                self.current_repos[repo][team] = team.permission
+                self.current_repos_teams[repo][team] = team.permission
 
     def _create_perms_changelist_for_teams(
         self,
@@ -352,7 +357,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     )
                     continue
 
-                if perm != self.current_repos[repo].get(team):
+                if perm != self.current_repos_teams[repo].get(team):
                     # Add the changeset to the changelist
                     if team not in team_changelist:
                         team_changelist[team] = {}
@@ -382,7 +387,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         # Find out whether repos' permissions contain *configured* teams that
         # should not have permissions
-        for repo, teams in self.current_repos.items():
+        for repo, teams in self.current_repos_teams.items():
             for team in teams:
                 # Get configured repos for this team, finding out whether repo
                 # is configured for this team
@@ -445,8 +450,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for _, team_attrs in self.configured_teams.items():
             for repo, perm in team_attrs.get("repos", {}).items():
                 # Create repo if non-exist
-                if repo not in self.configured_repos:
-                    self.configured_repos[repo] = {}
+                if repo not in self.configured_repos_collaborators:
+                    self.configured_repos_collaborators[repo] = {}
 
                 # Get team maintainers and members
                 team_members = self._aggregate_lists(
@@ -457,16 +462,95 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 for team_member in team_members:
                     # Check if permissions already exist
                     # TODO: evaluate highest permissions for this member
-                    if self.configured_repos[repo].get(team_member, {}):
+                    if self.configured_repos_collaborators[repo].get(team_member, {}):
                         logging.debug(
                             "Permissions for %s on %s already exist: %s. "
                             "Checking whether new permissions is higher.",
                             team_member,
                             repo,
-                            self.configured_repos[repo][team_member],
+                            self.configured_repos_collaborators[repo][team_member],
                         )
-                        self.configured_repos[repo][team_member] = self._get_highest_permission(
-                            perm, self.configured_repos[repo][team_member]
+                        self.configured_repos_collaborators[repo][team_member] = (
+                            self._get_highest_permission(
+                                perm, self.configured_repos_collaborators[repo][team_member]
+                            )
                         )
                     else:
-                        self.configured_repos[repo][team_member] = perm
+                        self.configured_repos_collaborators[repo][team_member] = perm
+
+    def _convert_graphql_perm_to_rest(self, permission: str) -> str:
+        """Convert a repo permission coming from the GraphQL API to the ones
+        coming from the REST API"""
+        perm_conversion = {
+            "READ": "pull",
+            "TRIAGE": "triage",
+            "WRITE": "write",
+            "MAINTAIN": "maintain",
+            "ADMIN": "admin",
+        }
+        if permission in perm_conversion:
+            replacement = perm_conversion.get(permission, "")
+            return replacement
+
+        return permission
+
+    def _fetch_collaborators_of_repo(self, repo: str):
+        """Get all collaborators (individuals) of a GitHub repo with their
+        permissions using the GraphQL API"""
+        query = """
+            query($owner: String!, $name: String!, $cursor: String) {
+            repository(owner: $owner, name: $name) {
+                collaborators(first: 20, after: $cursor) {
+                edges {
+                    node {
+                        login
+                    }
+                    permission
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                }
+                }
+            }
+        }
+        """
+
+        # Initial query parameters
+        variables = {"owner": self.org.login, "name": repo, "cursor": None}
+
+        collaborators = []
+        has_next_page = True
+
+        while has_next_page:
+            result = run_graphql_query(query, variables, self.gh_token)
+            try:
+                collaborators.extend(result["data"]["repository"]["collaborators"]["edges"])
+                has_next_page = result["data"]["repository"]["collaborators"]["pageInfo"][
+                    "hasNextPage"
+                ]
+                variables["cursor"] = result["data"]["repository"]["collaborators"]["pageInfo"][
+                    "endCursor"
+                ]
+            except (TypeError, KeyError):
+                logging.debug("Repo %s does not seem to have any collaborators", repo)
+                continue
+
+        # Extract relevant data
+        for collaborator in collaborators:
+            login = collaborator["node"]["login"]
+            # Skip entry if collaborator is org owner, which is "admin" anyway
+            if login in [user.login for user in self.org_owners]:
+                continue
+            permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
+            self.current_repos_collaborators[repo][login] = permission
+
+    def get_current_repos_and_user_perms(self):
+        """Get all repos, their current collaborators and their permissions"""
+        # We copy the list of repos from self.current_repos_teams
+        for repo in self.current_repos_teams:
+            self.current_repos_collaborators[repo.name] = {}
+
+        for repo in self.current_repos_collaborators:
+            # Get users for this repo
+            self._fetch_collaborators_of_repo(repo)

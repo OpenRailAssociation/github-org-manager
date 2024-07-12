@@ -474,13 +474,50 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return ""
 
+    def _get_direct_repo_permissions_of_team(self, team_dict: dict) -> tuple[dict[str, str], str]:
+        """Get a list of directly configured repo permissions for a team, and
+        whether the team has a parent"""
+        repo_perms: dict[str, str] = {}
+        # Direct permissions
+        for repo, perm in team_dict.get("repos", {}).items():
+            repo_perms[repo] = perm
+
+        # Parent team
+        parent = team_dict.get("parent", "")
+
+        return repo_perms, parent
+
+    def _get_all_repo_permissions_for_team_and_parents(self, team_name: str, team_dict: dict):
+        """Get a list of all configured repo permissions for a team, also those
+        inherited by parent teams"""
+        all_repo_perms, parent = self._get_direct_repo_permissions_of_team(team_dict=team_dict)
+        # If parents have been found, iterate and merge them
+        while parent:
+            logging.debug(
+                "Checking for repository permissions of %s's parent team %s", team_name, parent
+            )
+            parent_team_dict = self.configured_teams[parent]
+            repo_perm, parent = self._get_direct_repo_permissions_of_team(
+                team_dict=parent_team_dict
+            )
+
+            for repo, perm in repo_perm.items():
+                # Add (highest) repo permission
+                all_repo_perms[repo] = self._get_highest_permission(
+                    perm, all_repo_perms.get(repo, "")
+                )
+
+        return all_repo_perms
+
     def _get_configured_repos_and_user_perms(self):
         """
         Get a list of repos with a list of individuals and their permissions,
         based on their team memberships
         """
-        for _, team_attrs in self.configured_teams.items():
-            for repo, perm in team_attrs.get("repos", {}).items():
+        for team_name, team_attrs in self.configured_teams.items():
+            logging.debug("Getting configured repository permissions for team %s", team_name)
+            repo_perms = self._get_all_repo_permissions_for_team_and_parents(team_name, team_attrs)
+            for repo, perm in repo_perms.items():
                 # Create repo if non-exist
                 if repo not in self.configured_repos_collaborators:
                     self.configured_repos_collaborators[repo] = {}
@@ -627,6 +664,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 except KeyError:
                     config_perm = self.default_repository_permission
 
+                # TODO: Evaluate whether current permission is higher than
+                # configured permission
                 if current_perm != config_perm:
                     # Find out whether user has these unconfigured permissions
                     # due to being member of an unconfigured team. Check whether

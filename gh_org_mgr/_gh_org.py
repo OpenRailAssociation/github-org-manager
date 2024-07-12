@@ -7,16 +7,12 @@
 import logging
 from dataclasses import asdict, dataclass, field
 
-from github import (
-    Github,
-    NamedUser,
-    Organization,
-    Repository,
-    Team,
-    UnknownObjectException,
-)
+from github import Github, UnknownObjectException
+from github.NamedUser import NamedUser
+from github.Organization import Organization
+from github.Repository import Repository
+from github.Team import Team
 
-# TODO: Ease Object imports
 from ._gh_api import get_github_token, run_graphql_query
 
 
@@ -25,20 +21,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     """Dataclass holding GH organization data and functions"""
 
     gh: Github = None  # type: ignore
-    org: Organization.Organization = None  # type: ignore
+    org: Organization = None  # type: ignore
     gh_token: str = ""
-    org_owners: list[NamedUser.NamedUser] = field(default_factory=list)
-    org_members: list[NamedUser.NamedUser] = field(default_factory=list)
-    current_teams: dict[Team.Team, dict] = field(default_factory=dict)
+    org_owners: list[NamedUser] = field(default_factory=list)
+    org_members: list[NamedUser] = field(default_factory=list)
+    current_teams: dict[Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
-    current_repos_teams: dict[Repository.Repository, dict[Team.Team, str]] = field(
-        default_factory=dict
-    )
-    current_repos_collaborators: dict[Repository.Repository, dict[str, str]] = field(
-        default_factory=dict
-    )
+    current_repos_teams: dict[Repository, dict[Team, str]] = field(default_factory=dict)
+    current_repos_collaborators: dict[Repository, dict[str, str]] = field(default_factory=dict)
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
-    archived_repos: list[Repository.Repository] = field(default_factory=list)
+    archived_repos: list[Repository] = field(default_factory=list)
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # --------------------------------------------------------------------------
@@ -143,10 +135,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         logging.debug("Team '%s' has no configured %ss", team_name, role)
         return []
 
-    def _get_current_team_members(self, team: Team.Team) -> dict[NamedUser.NamedUser, str]:
+    def _get_current_team_members(self, team: Team) -> dict[NamedUser, str]:
         """Return dict of current users with their respective roles. Also
         contains members of child teams"""
-        current_users: dict[NamedUser.NamedUser, str] = {}
+        current_users: dict[NamedUser, str] = {}
         for role in ("member", "maintainer"):
             # Make a two-step check whether person is actually in team, as
             # get_members() also return child-team members
@@ -155,10 +147,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return current_users
 
-    def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser.NamedUser | None:
+    def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
         """Turn a username into a proper GitHub user object"""
         try:
-            gh_user: NamedUser.NamedUser = self.gh.get_user(username)  # type: ignore
+            gh_user: NamedUser = self.gh.get_user(username)  # type: ignore
         except UnknownObjectException:
             logging.error(
                 "The user '%s' configured as member of team '%s' does not "
@@ -336,9 +328,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def _create_perms_changelist_for_teams(
         self,
-    ) -> dict[Team.Team, dict[Repository.Repository, str]]:
+    ) -> dict[Team, dict[Repository, str]]:
         """Create a permission/repo changelist from the perspective of configured teams"""
-        team_changelist: dict[Team.Team, dict[Repository.Repository, str]] = {}
+        team_changelist: dict[Team, dict[Repository, str]] = {}
         for team_name, team_attrs in self.configured_teams.items():
             # Handle unset configured attributes
             if team_attrs is None:
@@ -370,11 +362,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         return team_changelist
 
     def _document_unconfigured_team_repo_permissions(
-        self, team: Team.Team, team_permission: str, repo_name: str
+        self, team: Team, team_permission: str, repo_name: str
     ) -> None:
         """Create a record of all members of a team and their permissions on a
         repo due to being member of an unconfigured team"""
-        users_of_unconfigured_team: dict[NamedUser.NamedUser, str] = self.current_teams[team].get(
+        users_of_unconfigured_team: dict[NamedUser, str] = self.current_teams[team].get(
             "members"
         )  # type: ignore
         # Initiate this repo in the dict as dict if not present
@@ -533,7 +525,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return permission
 
-    def _fetch_collaborators_of_repo(self, repo: Repository.Repository):
+    def _fetch_collaborators_of_repo(self, repo: Repository):
         """Get all collaborators (individuals) of a GitHub repo with their
         permissions using the GraphQL API"""
         query = """

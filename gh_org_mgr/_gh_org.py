@@ -16,6 +16,7 @@ from github import (
     UnknownObjectException,
 )
 
+# TODO: Ease Object imports
 from ._gh_api import get_github_token, run_graphql_query
 
 
@@ -33,7 +34,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     current_repos_teams: dict[Repository.Repository, dict[Team.Team, str]] = field(
         default_factory=dict
     )
-    current_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
+    current_repos_collaborators: dict[Repository.Repository, dict[str, str]] = field(
+        default_factory=dict
+    )
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository.Repository] = field(default_factory=list)
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
@@ -530,7 +533,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return permission
 
-    def _fetch_collaborators_of_repo(self, repo: str):
+    def _fetch_collaborators_of_repo(self, repo: Repository.Repository):
         """Get all collaborators (individuals) of a GitHub repo with their
         permissions using the GraphQL API"""
         query = """
@@ -553,7 +556,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """
 
         # Initial query parameters
-        variables = {"owner": self.org.login, "name": repo, "cursor": None}
+        variables = {"owner": self.org.login, "name": repo.name, "cursor": None}
 
         collaborators = []
         has_next_page = True
@@ -569,7 +572,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     "endCursor"
                 ]
             except (TypeError, KeyError):
-                logging.debug("Repo %s does not seem to have any collaborators", repo)
+                logging.debug("Repo %s does not seem to have any collaborators", repo.name)
                 continue
 
         # Extract relevant data
@@ -585,7 +588,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """Get all repos, their current collaborators and their permissions"""
         # We copy the list of repos from self.current_repos_teams
         for repo in self.current_repos_teams:
-            self.current_repos_collaborators[repo.name] = {}
+            self.current_repos_collaborators[repo] = {}
 
         for repo in self.current_repos_collaborators:
             # Get users for this repo
@@ -598,8 +601,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # team membership) and the current state (either through team membership
         # or individual).
         # The resulting structure is:
-        # - configured_repos_collaborators: dict[reponame, dict[username, permission]]
-        # - current_repos_collaborators: dict[reponame, dict[username, permission]]
+        # - configured_repos_collaborators: dict[Repository, dict[username, permission]]
+        # - current_repos_collaborators: dict[Repository, dict[username, permission]]
         self._get_configured_repos_and_user_perms()
         self._get_current_repos_and_user_perms()
 
@@ -608,11 +611,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # surplus permissions. As no individual permissions are allowed, these
         # will be fully revoked.
         for repo, current_repo_perms in self.current_repos_collaborators.items():
-            repo_obj: Repository.Repository | None = None
             for username, current_perm in current_repo_perms.items():
                 # Get configured user permissions for this repo
                 try:
-                    config_perm = self.configured_repos_collaborators[repo][username]
+                    config_perm = self.configured_repos_collaborators[repo.name][username]
                 # There is no configured permission for this user in this repo
                 except KeyError:
                     config_perm = None
@@ -622,7 +624,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     # due to being member of an unconfigured team. Check whether
                     # these are the same permissions as the team would get them.
                     unconfigured_team_repo_permission = self.unconfigured_team_repo_permissions.get(
-                        repo, {}
+                        repo.name, {}
                     ).get(username, "")
                     if unconfigured_team_repo_permission:
                         if current_perm == unconfigured_team_repo_permission:
@@ -632,7 +634,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                                 "Will not make any changes therefore.",
                                 username,
                                 current_perm,
-                                repo,
+                                repo.name,
                             )
                             continue
 
@@ -642,22 +644,18 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             "repo is '%s'. Removing them from collaborators therefore.",
                             username,
                             unconfigured_team_repo_permission,
-                            repo,
+                            repo.name,
                             current_perm,
                         )
 
                     logging.info(
                         "Remove %s from %s. They have '%s' there but should only have '%s'.",
                         username,
-                        repo,
+                        repo.name,
                         current_perm,
                         config_perm,
                     )
-                    # Initiate proper repository object if action needs to be taken
-                    # TODO: Make this unecessary by using the already existing repo objects before
-                    if repo_obj is None:
-                        repo_obj = self.org.get_repo(repo)
 
                     # Remove collaborator
                     if not dry:
-                        repo_obj.remove_from_collaborators(username)
+                        repo.remove_from_collaborators(username)

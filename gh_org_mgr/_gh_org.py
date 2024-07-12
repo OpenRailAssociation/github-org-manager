@@ -36,9 +36,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     current_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository.Repository] = field(default_factory=list)
-    unconfigured_team_repo_permissions: dict[str, dict[Team.Team, str]] = field(
-        default_factory=dict
-    )
+    unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -375,7 +373,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         repo due to being member of an unconfigured team"""
         users_of_unconfigured_team: dict[NamedUser.NamedUser, str] = self.current_teams[team].get(
             "members"
-        )
+        )  # type: ignore
         # Initiate this repo in the dict as dict if not present
         if repo_name not in self.unconfigured_team_repo_permissions:
             self.unconfigured_team_repo_permissions[repo_name] = {}

@@ -634,6 +634,19 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             self.org.default_repository_permission
         )
 
+    def _permission1_higher_than_permission2(self, permission1: str, permission2: str) -> bool:
+        """Check whether permission 1 is higher than permission 2"""
+        perms_ranking = ["admin", "maintain", "push", "triage", "pull", ""]
+
+        def get_rank(permission):
+            return perms_ranking.index(permission) if permission in perms_ranking else 99
+        rank_permission1 = get_rank(permission1)
+        rank_permission2 = get_rank(permission2)
+
+        # The lower the index, the higher the permission. If lower than
+        # permission2, return True
+        return rank_permission1 < rank_permission2
+
     def sync_repo_collaborator_permissions(self, dry: bool = False):
         """Compare the configured with the current repo permissions for all
         repositories' collaborators"""
@@ -664,15 +677,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 except KeyError:
                     config_perm = self.default_repository_permission
 
-                # TODO: Evaluate whether current permission is higher than
-                # configured permission
-                if current_perm != config_perm:
+                # Evaluate whether current permission is higher than configured
+                # permission
+                if self._permission1_higher_than_permission2(current_perm, config_perm):
                     # Find out whether user has these unconfigured permissions
                     # due to being member of an unconfigured team. Check whether
                     # these are the same permissions as the team would get them.
                     unconfigured_team_repo_permission = self.unconfigured_team_repo_permissions.get(
                         repo.name, {}
                     ).get(username, "")
+
                     if unconfigured_team_repo_permission:
                         if current_perm == unconfigured_team_repo_permission:
                             logging.info(

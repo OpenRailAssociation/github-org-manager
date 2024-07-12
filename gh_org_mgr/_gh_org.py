@@ -23,6 +23,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     gh: Github = None  # type: ignore
     org: Organization = None  # type: ignore
     gh_token: str = ""
+    default_repository_permission: str = ""
     org_owners: list[NamedUser] = field(default_factory=list)
     org_members: list[NamedUser] = field(default_factory=list)
     current_teams: dict[Team, dict] = field(default_factory=dict)
@@ -75,9 +76,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Teams
     # --------------------------------------------------------------------------
-    def get_current_teams(self):
+    def _get_current_teams(self):
         """Get teams of the existing organisation"""
-
         for team in list(self.org.get_teams()):
             self.current_teams[team] = {"members": {}, "repos": {}}
 
@@ -85,7 +85,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """Find out which teams are configured but not part of the org yet"""
 
         # Get list of current teams
-        self.get_current_teams()
+        self._get_current_teams()
 
         # Get the names of the existing teams
         existent_team_names = [team.name for team in self.current_teams]
@@ -108,7 +108,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 logging.debug("Team '%s' already exists", team)
 
         # Re-scan current teams as new ones may have been created
-        self.get_current_teams()
+        self._get_current_teams()
 
     # --------------------------------------------------------------------------
     # Members
@@ -513,14 +513,15 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """Convert a repo permission coming from the GraphQL API to the ones
         coming from the REST API"""
         perm_conversion = {
-            "READ": "pull",
-            "TRIAGE": "triage",
-            "WRITE": "push",
-            "MAINTAIN": "maintain",
-            "ADMIN": "admin",
+            "none": "",
+            "read": "pull",
+            "triage": "triage",
+            "write": "push",
+            "maintain": "maintain",
+            "admin": "admin",
         }
-        if permission in perm_conversion:
-            replacement = perm_conversion.get(permission, "")
+        if permission.lower() in perm_conversion:
+            replacement = perm_conversion.get(permission.lower(), "")
             return replacement
 
         return permission
@@ -528,20 +529,22 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     def _fetch_collaborators_of_repo(self, repo: Repository):
         """Get all collaborators (individuals) of a GitHub repo with their
         permissions using the GraphQL API"""
+        # TODO: Consider doing this for all repositories at once, but calculate
+        # costs beforehand
         query = """
             query($owner: String!, $name: String!, $cursor: String) {
-            repository(owner: $owner, name: $name) {
-                collaborators(first: 20, after: $cursor) {
-                edges {
-                    node {
-                        login
-                    }
-                    permission
-                }
-                pageInfo {
-                    endCursor
-                    hasNextPage
-                }
+                repository(owner: $owner, name: $name) {
+                    collaborators(first: 100, after: $cursor) {
+                        edges {
+                            node {
+                                login
+                            }
+                            permission
+                        }
+                        pageInfo {
+                            endCursor
+                            hasNextPage
+                        }
                 }
             }
         }
@@ -554,6 +557,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         has_next_page = True
 
         while has_next_page:
+            logging.debug("Requesting collaborators for %s", repo.name)
             result = run_graphql_query(query, variables, self.gh_token)
             try:
                 collaborators.extend(result["data"]["repository"]["collaborators"]["edges"])
@@ -586,6 +590,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             # Get users for this repo
             self._fetch_collaborators_of_repo(repo)
 
+    def _get_default_repository_permission(self):
+        """Get the default repository permission for all users. Convert to
+        admin/maintain/push/triage/pull scheme that the REST API provides"""
+        self.default_repository_permission = self._convert_graphql_perm_to_rest(
+            self.org.default_repository_permission
+        )
+
     def sync_repo_collaborator_permissions(self, dry: bool = False):
         """Compare the configured with the current repo permissions for all
         repositories' collaborators"""
@@ -595,8 +606,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # The resulting structure is:
         # - configured_repos_collaborators: dict[Repository, dict[username, permission]]
         # - current_repos_collaborators: dict[Repository, dict[username, permission]]
+        logging.debug("Starting to sync collaborator/individual permissions")
         self._get_configured_repos_and_user_perms()
         self._get_current_repos_and_user_perms()
+
+        # Get and convert the default permission for all members so we can check for it
+        self._get_default_repository_permission()
 
         # Loop over all factually existing repositories. This will be a one-way
         # sync. Team permissions have been set before, we are now removing
@@ -607,9 +622,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 # Get configured user permissions for this repo
                 try:
                     config_perm = self.configured_repos_collaborators[repo.name][username]
-                # There is no configured permission for this user in this repo
+                # There is no configured permission for this user in this repo,
+                # so we assume the default permission
                 except KeyError:
-                    config_perm = ""
+                    config_perm = self.default_repository_permission
 
                 if current_perm != config_perm:
                     # Find out whether user has these unconfigured permissions
@@ -640,6 +656,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             current_perm,
                         )
 
+                    # Remove person from repo, but only if their repository also
+                    # diverges from the default repository permission given by
+                    # the organization
                     logging.info(
                         "Remove %s from %s. They have '%s' there but should only have '%s'.",
                         username,

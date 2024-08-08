@@ -12,6 +12,7 @@ This document lists the Maintainers of the Project. Maintainers may be added onc
 | **NAME** | **Organization** |
 | --- | --- |
 | Max Mehl | DB Systel GmbH |
+| [Florian Amsallem](https://github.com/flomonster) | SNCF Réseau |
 
 ---
 Based on [GitHub's Minimum Viable Governance (MVG)](https://github.com/github/MVG). Licensed under the [CC-BY 4.0 License](https://creativecommons.org/licenses/by/4.0/).

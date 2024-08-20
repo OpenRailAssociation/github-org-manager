@@ -11,6 +11,7 @@ import sys
 from . import __version__, configure_logger
 from ._config import parse_config_files
 from ._gh_org import GHorg
+from ._setup_team import setup_team
 
 # Main parser with root-level flags
 parser = argparse.ArgumentParser(
@@ -47,6 +48,39 @@ parser_sync.add_argument(
     help="Do not take any action in ignored repositories",
 )
 
+# Setup Team
+parser_create_team = subparsers.add_parser(
+    "setup-team",
+    help="Helps with setting up a new team using a base template",
+    parents=[common_flags],
+)
+parser_create_team.add_argument(
+    "-n",
+    "--name",
+    required=True,
+    help="Name of the team that shall be created",
+)
+parser_create_team_file = parser_create_team.add_mutually_exclusive_group(required=True)
+parser_create_team_file.add_argument(
+    "-c",
+    "--config",
+    help=(
+        "Path to the directory in which the configuration of an GitHub organisation is located. "
+        "If this option is used, the tool will automatically come up with a file name"
+    ),
+)
+parser_create_team_file.add_argument(
+    "-f",
+    "--file",
+    help="Path to the file in which the team shall be added",
+)
+# parser_create_team.add_argument(
+#     "-a",
+#     "--file-exists-action",
+#     help="Define which action shall be taken when the requested output file already exists",
+#     choices=["override", "extend", "skip"]
+# )
+
 
 def main():
     """Main function"""
@@ -56,6 +90,7 @@ def main():
 
     configure_logger(args.debug)
 
+    # Sync command
     if args.command == "sync":
         if args.dry:
             logging.info("Dry-run mode activated, will not make any changes at GitHub")
@@ -90,3 +125,7 @@ def main():
         # Debug output
         logging.debug("Final dataclass:\n%s", org.df2json())
         org.ratelimit()
+
+    # Setup Team command
+    elif args.command == "setup-team":
+        setup_team(team_name=args.name, config_path=args.config, file_path=args.file)

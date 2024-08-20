@@ -52,9 +52,9 @@ You can execute the program using the command `gh-org-mgr`. `gh-org-mgr --help` 
 
 Some examples:
 
-* `gh-org-mgr -c myorgconf`: synchronize the settings of the GitHub organization with your local configuration in the given configuration path (`myorgconf`). This may create new teams, remove/add members, and change permissions.
-* `gh-org-mgr -c myorgconf --dry`: as above, but do not make any modification. Perfect for testing your local configuration and see its potential effects.
-* `gh-org-mgr -c myorgconf --debug`: the first example, but show full debugging information.
+* `gh-org-mgr sync -c myorgconf`: synchronize the settings of the GitHub organization with your local configuration in the given configuration path (`myorgconf`). This may create new teams, remove/add members, and change permissions.
+* `gh-org-mgr sync -c myorgconf --dry`: as above, but do not make any modification. Perfect for testing your local configuration and see its potential effects.
+* `gh-org-mgr sync -c myorgconf --debug`: the first example, but show full debugging information.
 
 ## License
 

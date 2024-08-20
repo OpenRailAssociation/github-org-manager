@@ -50,11 +50,16 @@ You may also be interested in the [live configuration of the OpenRail Associatio
 
 You can execute the program using the command `gh-org-mgr`. `gh-org-mgr --help` shows all available arguments and options.
 
-Some examples:
+Synchronisation examples:
 
-* `gh-org-mgr -c myorgconf`: synchronize the settings of the GitHub organization with your local configuration in the given configuration path (`myorgconf`). This may create new teams, remove/add members, and change permissions.
-* `gh-org-mgr -c myorgconf --dry`: as above, but do not make any modification. Perfect for testing your local configuration and see its potential effects.
-* `gh-org-mgr -c myorgconf --debug`: the first example, but show full debugging information.
+* `gh-org-mgr sync -c myorgconf`: synchronize the settings of the GitHub organization with your local configuration in the given configuration path (`myorgconf`). This may create new teams, remove/add members, and change permissions.
+* `gh-org-mgr sync -c myorgconf --dry`: as above, but do not make any modification. Perfect for testing your local configuration and see its potential effects.
+* `gh-org-mgr sync -c myorgconf --debug`: the first example, but show full debugging information.
+
+Setup team examples:
+
+* `gh-org-mgr setup-team -n "My Team Name" -c myorgconf`: Bootstrap a team configuration for this team name. Will create a file `myorgconf/teams/my-team-name.yaml`, or provide options if this file already exists.
+* `gh-org-mgr setup-team -n "My Team Name" -f path/to/myteam.yaml`: Bootstrap a team configuration for this team name and will force to write it in the given file. If the file already exists, offer some options.
 
 ## License
 

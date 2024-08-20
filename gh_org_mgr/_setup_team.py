@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 DB Systel GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Functions to help with setting up new team"""
 
 import logging
@@ -84,7 +88,7 @@ def setup_team(
     # Come up with file name based on team name in the given config directory
     if not file_path:
         # Combine config dir and file name
-        file_path = join(config_path, "teams", slugify(team_name) + ".yaml")
+        file_path = join(config_path, "teams", slugify(team_name) + ".yaml")  # type: ignore
         logging.debug("Derived file path: %s", file_path)
 
     # Fill template

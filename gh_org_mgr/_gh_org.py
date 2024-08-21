@@ -5,7 +5,6 @@
 """Class for the GitHub organization which contains most of the logic"""
 
 import logging
-import sys
 from dataclasses import asdict, dataclass, field
 
 from github import Github, UnknownObjectException
@@ -187,19 +186,29 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for member in self.org.get_members(role="admin"):
             self.current_org_owners.append(member)
 
-    def _get_configured_org_owners(self, cfg_org_owners: list[str]) -> None:
+    def _get_configured_org_owners(self, cfg_org_owners: list[str] | str | None) -> None:
         """Import configured owners for the organization from the org configuration"""
-        # Sanity check
-        if not cfg_org_owners or not isinstance(cfg_org_owners, list):
-            logging.critical(
-                "No owners for GitHub organisation defined or not as list. "
-                "This would make the organization unmanageable. Will not continue."
+        # Add configured owners if they are a list
+        if isinstance(cfg_org_owners, list):
+            # Import users to dataclass attribute, lower-case
+            for user in cfg_org_owners:
+                self.configured_org_owners.append(user.lower())
+        else:
+            logging.warning(
+                "The organisation owners are not configured as a proper list. Will not handle them."
             )
-            sys.exit(1)
 
-        # Import users to dataclass attribute, lower-case
-        for user in cfg_org_owners:
-            self.configured_org_owners.append(user.lower())
+    def _check_non_empty_configured_owners(self) -> bool:
+        """Handle if there are no configured owners. Returns True if owners are configured."""
+        if not self.configured_org_owners:
+            logging.warning(
+                "No owners for your GitHub organisation configured. Will not make any "
+                "change regarding the ownership, and continue with the current owners: %s",
+                ", ".join([user.login for user in self.current_org_owners]),
+            )
+            return False
+
+        return True
 
     def _is_user_authenticated_user(self, user: NamedUser) -> bool:
         """Check if a given NamedUser is the authenticated user"""
@@ -213,58 +222,64 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         self._get_current_org_owners()
         self._get_configured_org_owners(cfg_org_owners=cfg_org_owners)
 
+        # Abort owner synchronisation if there are no configured owners
+        if not self._check_non_empty_configured_owners():
+            return
+
+        # Get differences between the current and configured owners
+        owners_remove, owners_ok, owners_add = self.compare_two_lists(
+            self.configured_org_owners, [user.login for user in self.current_org_owners]
+        )
         # Compare configured (lower-cased) owners with lower-cased list of current owners
-        current_org_owners_str = [user.login for user in self.current_org_owners]
-        if self.configured_org_owners == current_org_owners_str:
+        if not owners_remove and not owners_add:
             logging.info("Organization owners are in sync, no changes")
-        else:
-            # Get differences between the two lists
-            remove, match, add = self.compare_two_lists(
-                self.configured_org_owners, current_org_owners_str
-            )
-            logging.debug(
-                "Organization owners are not in sync. Config: '%s' vs. Current: '%s'",
-                self.configured_org_owners,
-                current_org_owners_str,
-            )
-            logging.debug("Will remove %s, will not change %s, will add %s", remove, match, add)
+            return
 
-            # Add the missing owners
-            for user in add:
-                if gh_user := self._resolve_gh_username(user, "<org owners>"):
-                    logging.info("Adding user '%s' as organization owner", gh_user.login)
-                    if not dry:
-                        self.org.add_to_members(gh_user, "admin")
+        logging.debug(
+            "Organization owners are not in sync. Config: '%s' vs. Current: '%s'",
+            self.configured_org_owners,
+            self.current_org_owners,
+        )
+        logging.debug(
+            "Will remove %s, will not change %s, will add %s", owners_remove, owners_ok, owners_add
+        )
 
-            # Remove the surplus owners
-            for user in remove:
-                if gh_user := self._resolve_gh_username(user, "<org owners>"):
-                    logging.info(
-                        "User '%s' is not configured as organization owners. "
-                        "Will make them a normal member",
+        # Add the missing owners
+        for user in owners_add:
+            if gh_user := self._resolve_gh_username(user, "<org owners>"):
+                logging.info("Adding user '%s' as organization owner", gh_user.login)
+                if not dry:
+                    self.org.add_to_members(gh_user, "admin")
+
+        # Remove the surplus owners
+        for user in owners_remove:
+            if gh_user := self._resolve_gh_username(user, "<org owners>"):
+                logging.info(
+                    "User '%s' is not configured as organization owners. "
+                    "Will make them a normal member",
+                    gh_user.login,
+                )
+                # Handle authenticated user being the same as the one you want to degrade
+                if self._is_user_authenticated_user(gh_user):
+                    logging.warning(
+                        "The user '%s' you want to remove from owners is the one you "
+                        "authenticated with. This may disrupt all further operations. "
+                        "Unless you run the program with --force, "
+                        "this operation will not be executed.",
                         gh_user.login,
                     )
-                    # Handle authenticated user being the same as the one you want to degrade
-                    if self._is_user_authenticated_user(gh_user):
-                        logging.warning(
-                            "The user '%s' you want to remove from owners is the one you "
-                            "authenticated with. This may disrupt all further operations. "
-                            "Unless you run the program with --force, "
-                            "this operation will not be executed.",
-                            gh_user.login,
+                    # Check if user forced this operation
+                    if force:
+                        logging.info(
+                            "You called the program with --force, "
+                            "so it will remove yourself from the owners"
                         )
-                        # Check if user forced this operation
-                        if force:
-                            logging.info(
-                                "You called the program with --force, "
-                                "so it will remove yourself from the owners"
-                            )
-                        else:
-                            continue
+                    else:
+                        continue
 
-                    # Execute the degradation of the owner
-                    if not dry:
-                        self.org.add_to_members(gh_user, "member")
+                # Execute the degradation of the owner
+                if not dry:
+                    self.org.add_to_members(gh_user, "member")
 
         # Update the current organisation owners
         self._get_current_org_owners()

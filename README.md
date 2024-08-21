@@ -17,6 +17,7 @@ The basic principle: all settings reside in YAML configuration files which will 
 
 ## Features
 
+* Manage GitHub organization owners
 * Manage GitHub teams and their members and maintainers
 * Support of sub-teams
 * Manage teams' permissions on organizations' repositories

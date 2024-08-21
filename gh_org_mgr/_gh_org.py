@@ -5,6 +5,7 @@
 """Class for the GitHub organization which contains most of the logic"""
 
 import logging
+import sys
 from dataclasses import asdict, dataclass, field
 
 from github import Github, UnknownObjectException
@@ -24,7 +25,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     org: Organization = None  # type: ignore
     gh_token: str = ""
     default_repository_permission: str = ""
-    org_owners: list[NamedUser] = field(default_factory=list)
+    current_org_owners: list[NamedUser] = field(default_factory=list)
+    configured_org_owners: list[str] = field(default_factory=list)
     org_members: list[NamedUser] = field(default_factory=list)
     current_teams: dict[Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
@@ -43,11 +45,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # supported, or multiple spaces etc.
         return team.replace(" ", "-")
 
-    def login(self, orgname: str, token: str):
+    def login(self, orgname: str, token: str) -> None:
         """Login to GH, gather org data"""
         self.gh_token = get_github_token(token)
         self.gh = Github(self.gh_token)
+        logging.debug("Logged in as %s", self.gh.get_user().login)
         self.org = self.gh.get_organization(orgname)
+        logging.debug("Gathered data from organization '%s' (%s)", self.org.login, self.org.name)
 
     def ratelimit(self):
         """Get current rate limit"""
@@ -84,6 +88,57 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             return string
 
         return pretty(d)
+
+    def compare_two_lists(self, list1: list[str], list2: list[str]):
+        """
+        Compares two lists of strings and returns a tuple containing elements
+        missing in each list and common elements.
+
+        Args:
+            list1 (list of str): The first list of strings.
+            list2 (list of str): The second list of strings.
+
+        Returns:
+            tuple: A tuple containing three lists:
+                1. The first list contains elements in `list2` that are missing in `list1`.
+                2. The second list contains elements that are present in both `list1` and `list2`.
+                3. The third list contains elements in `list1` that are missing in `list2`.
+
+        Example:
+            >>> list1 = ["apple", "banana", "cherry"]
+            >>> list2 = ["banana", "cherry", "date", "fig"]
+            >>> compare_lists(list1, list2)
+            (['date', 'fig'], ['banana', 'cherry'], ['apple'])
+        """
+        # Convert lists to sets for easier comparison
+        set1, set2 = set(list1), set(list2)
+
+        # Elements in list2 that are missing in list1
+        missing_in_list1 = list(set2 - set1)
+
+        # Elements present in both lists
+        common_elements = list(set1 & set2)
+
+        # Elements in list1 that are missing in list2
+        missing_in_list2 = list(set1 - set2)
+
+        # Return the result as a tuple
+        return (missing_in_list1, common_elements, missing_in_list2)
+
+    def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
+        """Turn a username into a proper GitHub user object"""
+        try:
+            gh_user: NamedUser = self.gh.get_user(username)  # type: ignore
+        except UnknownObjectException:
+            logging.error(
+                "The user '%s' configured as member of team '%s' does not "
+                "exist on GitHub. Spelling error or did they rename themselves?",
+                username,
+                teamname,
+            )
+            return None
+
+        return gh_user
 
     # --------------------------------------------------------------------------
     # Teams
@@ -123,12 +178,104 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         self._get_current_teams()
 
     # --------------------------------------------------------------------------
+    # Owners
+    # --------------------------------------------------------------------------
+    def _get_current_org_owners(self) -> None:
+        """Get all owners of the org"""
+        # Reset the user list, then build up new list
+        self.current_org_owners = []
+        for member in self.org.get_members(role="admin"):
+            self.current_org_owners.append(member)
+
+    def _get_configured_org_owners(self, cfg_org_owners: list[str]) -> None:
+        """Import configured owners for the organization from the org configuration"""
+        # Sanity check
+        if not cfg_org_owners or not isinstance(cfg_org_owners, list):
+            logging.critical(
+                "No owners for GitHub organisation defined or not as list. "
+                "This would make the organization unmanageable. Will not continue."
+            )
+            sys.exit(1)
+
+        # Import users to dataclass attribute, lower-case
+        for user in cfg_org_owners:
+            self.configured_org_owners.append(user.lower())
+
+    def _is_user_authenticated_user(self, user: NamedUser) -> bool:
+        """Check if a given NamedUser is the authenticated user"""
+        if user.login == self.gh.get_user().login:
+            return True
+        return False
+
+    def sync_org_owners(self, cfg_org_owners: list, dry: bool = False, force: bool = False) -> None:
+        """Synchronise the organization owners"""
+        # Get current and configured owners
+        self._get_current_org_owners()
+        self._get_configured_org_owners(cfg_org_owners=cfg_org_owners)
+
+        # Compare configured (lower-cased) owners with lower-cased list of current owners
+        current_org_owners_str = [user.login for user in self.current_org_owners]
+        if self.configured_org_owners == current_org_owners_str:
+            logging.info("Organization owners are in sync, no changes")
+        else:
+            # Get differences between the two lists
+            remove, match, add = self.compare_two_lists(
+                self.configured_org_owners, current_org_owners_str
+            )
+            logging.debug(
+                "Organization owners are not in sync. Config: '%s' vs. Current: '%s'",
+                self.configured_org_owners,
+                current_org_owners_str,
+            )
+            logging.debug("Will remove %s, will not change %s, will add %s", remove, match, add)
+
+            # Add the missing owners
+            for user in add:
+                if gh_user := self._resolve_gh_username(user, "<org owners>"):
+                    logging.info("Adding user '%s' as organization owner", gh_user.login)
+                    if not dry:
+                        self.org.add_to_members(gh_user, "admin")
+
+            # Remove the surplus owners
+            for user in remove:
+                if gh_user := self._resolve_gh_username(user, "<org owners>"):
+                    logging.info(
+                        "User '%s' is not configured as organization owners. "
+                        "Will make them a normal member",
+                        gh_user.login,
+                    )
+                    # Handle authenticated user being the same as the one you want to degrade
+                    if self._is_user_authenticated_user(gh_user):
+                        logging.warning(
+                            "The user '%s' you want to remove from owners is the one you "
+                            "authenticated with. This may disrupt all further operations. "
+                            "Unless you run the program with --force, "
+                            "this operation will not be executed.",
+                            gh_user.login,
+                        )
+                        # Check if user forced this operation
+                        if force:
+                            logging.info(
+                                "You called the program with --force, "
+                                "so it will remove yourself from the owners"
+                            )
+                        else:
+                            continue
+
+                    # Execute the degradation of the owner
+                    if not dry:
+                        self.org.add_to_members(gh_user, "member")
+
+        # Update the current organisation owners
+        self._get_current_org_owners()
+
+    # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
-    def _get_org_members(self):
-        """Get all owners of the org"""
-        for member in self.org.get_members(role="admin"):
-            self.org_owners.append(member)
+    def _get_current_org_members(self):
+        """Get all ordinary members of the org"""
+        # Reset the user list, then build up new list
+        self.org_members = []
         for member in self.org.get_members(role="member"):
             self.org_members.append(member)
 
@@ -159,27 +306,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         return current_users
 
-    def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
-        """Turn a username into a proper GitHub user object"""
-        try:
-            gh_user: NamedUser = self.gh.get_user(username)  # type: ignore
-        except UnknownObjectException:
-            logging.error(
-                "The user '%s' configured as member of team '%s' does not "
-                "exist on GitHub. Spelling error or did they rename themselves?",
-                username,
-                teamname,
-            )
-            return None
-
-        return gh_user
-
     def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
         """Check the configured members of each team, add missing ones and delete unconfigured"""
         logging.debug("Starting to sync team members")
 
-        # Gather all members and owners of the organisation
-        self._get_org_members()
+        # Gather all ordinary members of the organisation
+        self._get_current_org_members()
 
         # Get open invitations
         open_invitations = [user.login.lower() for user in self.org.invitations()]
@@ -223,7 +355,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
             # Consider all GitHub organisation team maintainers if they are member of the team
             # This is because GitHub API returns them as maintainers even if they are just members
-            for user in self.org_owners:
+            for user in self.current_org_owners:
                 if user.login in configured_users:
                     logging.debug(
                         "Overriding role of organisation owner '%s' to maintainer", user.login
@@ -304,7 +436,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     def get_members_without_team(self) -> None:
         """Get all organisation members without any team membership"""
         # Combine org owners and org members
-        all_org_members = set(self.org_members + self.org_owners)
+        all_org_members = set(self.org_members + self.current_org_owners)
 
         # Get all members of all teams
         all_team_members_lst = []
@@ -639,7 +771,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for collaborator in collaborators:
             login: str = collaborator["node"]["login"]
             # Skip entry if collaborator is org owner, which is "admin" anyway
-            if login.lower() in [user.login.lower() for user in self.org_owners]:
+            if login.lower() in [user.login.lower() for user in self.current_org_owners]:
                 continue
             permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
             self.current_repos_collaborators[repo][login.lower()] = permission

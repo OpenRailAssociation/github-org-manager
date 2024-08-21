@@ -47,6 +47,12 @@ parser_sync.add_argument(
     action="store_true",
     help="Do not take any action in ignored repositories",
 )
+parser_sync.add_argument(
+    "-f",
+    "--force",
+    action="store_true",
+    help="Execute potentially dangerous actions which you will be warned about without this flag",
+)
 
 # Setup Team
 parser_create_team = subparsers.add_parser(
@@ -74,12 +80,6 @@ parser_create_team_file.add_argument(
     "--file",
     help="Path to the file in which the team shall be added",
 )
-# parser_create_team.add_argument(
-#     "-a",
-#     "--file-exists-action",
-#     help="Define which action shall be taken when the requested output file already exists",
-#     choices=["override", "extend", "skip"]
-# )
 
 
 def main():
@@ -112,6 +112,10 @@ def main():
 
         # Create teams that aren't present at Github yet
         org.create_missing_teams(dry=args.dry)
+        # Synchronise organisation owners
+        org.sync_org_owners(
+            cfg_org_owners=cfg_org.get("org_owners"), dry=args.dry, force=args.force
+        )
         # Synchronise the team memberships
         org.sync_teams_members(dry=args.dry)
         # Report about organisation members that do not belong to any team

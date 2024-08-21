@@ -74,12 +74,6 @@ parser_create_team_file.add_argument(
     "--file",
     help="Path to the file in which the team shall be added",
 )
-# parser_create_team.add_argument(
-#     "-a",
-#     "--file-exists-action",
-#     help="Define which action shall be taken when the requested output file already exists",
-#     choices=["override", "extend", "skip"]
-# )
 
 
 def main():

@@ -57,10 +57,6 @@ line-length = 100
 [tool.mypy]
 files = ["gh_org_mgr/*.py"]
 
-# Pylint
-[tool.pylint.'MESSAGES CONTROL']
-disable = "fixme"
-
 # Bump-My-Version
 [tool.bumpversion]
 commit = true

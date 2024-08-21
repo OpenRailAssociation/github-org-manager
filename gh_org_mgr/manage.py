@@ -106,7 +106,8 @@ def main():
                 "No GitHub organisation name configured in organisation settings. Cannot continue"
             )
             sys.exit(1)
-        org.configured_org_owners = cfg_org.get("org_owners")
+        org.configured_org_owners = cfg_org.get("org_owners", [])
+        org.default_settings = cfg_org.get("defaults", {})
 
         # Login to GitHub with token, get GitHub organisation
         org.login(cfg_org.get("org_name", ""), cfg_app.get("github_token", ""))

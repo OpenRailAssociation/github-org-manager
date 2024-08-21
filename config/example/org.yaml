@@ -10,3 +10,9 @@ org_name: example-org-on-github
 # List of owners of the GitHub organisation
 org_owners:
   - octocat
+
+# Default settings
+defaults:
+  team:
+    # Level of privacy of a team. Can be "secret" or "closed"
+    privacy: "closed"

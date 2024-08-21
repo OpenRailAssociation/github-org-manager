@@ -23,6 +23,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     gh: Github = None  # type: ignore
     org: Organization = None  # type: ignore
     gh_token: str = ""
+    default_settings: dict[str, dict[str, str]] = field(default_factory=dict)
     default_repository_permission: str = ""
     current_org_owners: list[NamedUser] = field(default_factory=list)
     configured_org_owners: list[str] = field(default_factory=list)
@@ -163,12 +164,19 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
                     if not dry:
-                        self.org.create_team(team, parent_team_id=parent_id)
+                        self.org.create_team(
+                            team,
+                            parent_team_id=parent_id,
+                            # Hardcode privacy as "secret" is not possible in child teams
+                            privacy="closed",
+                        )
 
                 else:
                     logging.info("Creating team '%s' without parent", team)
                     if not dry:
-                        self.org.create_team(team, privacy="closed")
+                        self.org.create_team(
+                            team, privacy=self.default_settings.get("team", {}).get("privacy", "")
+                        )
 
             else:
                 logging.debug("Team '%s' already exists", team)

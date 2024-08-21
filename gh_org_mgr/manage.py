@@ -94,6 +94,8 @@ def main():
     if args.command == "sync":
         if args.dry:
             logging.info("Dry-run mode activated, will not make any changes at GitHub")
+        if args.force:
+            logging.info("Force mode activated, will make potentially dangerous actions")
 
         org = GHorg()
 

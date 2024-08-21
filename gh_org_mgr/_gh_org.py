@@ -471,7 +471,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """Combine multiple lists into one while removing duplicates"""
         complete = []
         for single_list in lists:
-            complete.extend(single_list)
+            if single_list is not None:
+                complete.extend(single_list)
+            else:
+                logging.debug(
+                    "A list that we attempted to extend to another was None. "
+                    "This probably happened because a 'member:' or 'maintainer:' key was left empty"
+                )
 
         return list(set(complete))
 

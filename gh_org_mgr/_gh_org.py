@@ -199,9 +199,14 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for user in cfg_org_owners:
             self.configured_org_owners.append(user.lower())
 
-    def sync_org_owners(self, cfg_org_owners: list, dry: bool = False) -> None:
+    def _is_user_authenticated_user(self, user: NamedUser) -> bool:
+        """Check if a given NamedUser is the authenticated user"""
+        if user.login == self.gh.get_user().login:
+            return True
+        return False
+
+    def sync_org_owners(self, cfg_org_owners: list, dry: bool = False, force: bool = False) -> None:
         """Synchronise the organization owners"""
-        # TODO: Warn if user would remove themselves from owner permissions
         self._get_current_org_owners()
         self._get_configured_org_owners(cfg_org_owners=cfg_org_owners)
 
@@ -232,9 +237,29 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             for user in remove:
                 if gh_user := self._resolve_gh_username(user, "<org owners>"):
                     logging.info(
-                        "Remove user '%s' from organization owners by making them a normal member",
+                        "User '%s' is not configured as organization owners. "
+                        "Will make them a normal member",
                         gh_user.login,
                     )
+                    # Handle authenticated user being the same as the one you want to degrade
+                    if self._is_user_authenticated_user(gh_user):
+                        logging.warning(
+                            "The user '%s' you want to remove from owners is the one you "
+                            "authenticated with. This may disrupt all further operations. "
+                            "Unless you run the program with --force, "
+                            "this operation will not be executed.",
+                            gh_user.login,
+                        )
+                        # Check if user forced this operation
+                        if force:
+                            logging.info(
+                                "You called the program with --force, "
+                                "so it will remove yourself from the owners"
+                            )
+                        else:
+                            continue
+
+                    # Execute the degradation of the owner
                     if not dry:
                         self.org.add_to_members(gh_user, "member")
 

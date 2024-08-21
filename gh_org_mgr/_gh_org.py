@@ -272,7 +272,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
-    def _get_org_members(self):
+    def _get_current_org_members(self):
         """Get all ordinary members of the org"""
         # Reset the user list, then build up new list
         self.org_members = []
@@ -311,7 +311,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         logging.debug("Starting to sync team members")
 
         # Gather all ordinary members of the organisation
-        self._get_org_members()
+        self._get_current_org_members()
 
         # Get open invitations
         open_invitations = [user.login.lower() for user in self.org.invitations()]

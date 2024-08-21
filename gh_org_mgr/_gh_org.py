@@ -186,20 +186,19 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for member in self.org.get_members(role="admin"):
             self.current_org_owners.append(member)
 
-    def _get_configured_org_owners(self, cfg_org_owners: list[str] | str | None) -> None:
-        """Import configured owners for the organization from the org configuration"""
+    def _check_configured_org_owners(self) -> bool:
+        """Check configured owners and make them lower-case for better
+        comparison. Returns True if owners are well configured."""
         # Add configured owners if they are a list
-        if isinstance(cfg_org_owners, list):
-            # Import users to dataclass attribute, lower-case
-            for user in cfg_org_owners:
-                self.configured_org_owners.append(user.lower())
+        if isinstance(self.configured_org_owners, list):
+            # Make all configured users lower-case
+            self.configured_org_owners = [user.lower() for user in self.configured_org_owners]
         else:
             logging.warning(
                 "The organisation owners are not configured as a proper list. Will not handle them."
             )
+            self.configured_org_owners = []
 
-    def _check_non_empty_configured_owners(self) -> bool:
-        """Handle if there are no configured owners. Returns True if owners are configured."""
         if not self.configured_org_owners:
             logging.warning(
                 "No owners for your GitHub organisation configured. Will not make any "
@@ -216,14 +215,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             return True
         return False
 
-    def sync_org_owners(self, cfg_org_owners: list, dry: bool = False, force: bool = False) -> None:
+    def sync_org_owners(self, dry: bool = False, force: bool = False) -> None:
         """Synchronise the organization owners"""
         # Get current and configured owners
         self._get_current_org_owners()
-        self._get_configured_org_owners(cfg_org_owners=cfg_org_owners)
 
-        # Abort owner synchronisation if there are no configured owners
-        if not self._check_non_empty_configured_owners():
+        # Abort owner synchronisation if no owners are configured, or badly
+        if not self._check_configured_org_owners():
             return
 
         # Get differences between the current and configured owners

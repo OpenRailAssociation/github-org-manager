@@ -106,6 +106,7 @@ def main():
                 "No GitHub organisation name configured in organisation settings. Cannot continue"
             )
             sys.exit(1)
+        org.configured_org_owners = cfg_org.get("org_owners")
 
         # Login to GitHub with token, get GitHub organisation
         org.login(cfg_org.get("org_name", ""), cfg_app.get("github_token", ""))
@@ -115,9 +116,7 @@ def main():
         # Create teams that aren't present at Github yet
         org.create_missing_teams(dry=args.dry)
         # Synchronise organisation owners
-        org.sync_org_owners(
-            cfg_org_owners=cfg_org.get("org_owners"), dry=args.dry, force=args.force
-        )
+        org.sync_org_owners(dry=args.dry, force=args.force)
         # Synchronise the team memberships
         org.sync_teams_members(dry=args.dry)
         # Report about organisation members that do not belong to any team

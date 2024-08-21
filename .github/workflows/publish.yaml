@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-name: Python package
+name: Publish release on PyPI
+
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  release:
+    types: [published]
+
 jobs:
   build:
     runs-on: ubuntu-latest

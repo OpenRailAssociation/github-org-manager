@@ -182,6 +182,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     def _get_current_org_owners(self) -> None:
         """Get all owners of the org"""
+        # Reset the user list, then build up new list
+        self.current_org_owners = []
         for member in self.org.get_members(role="admin"):
             self.current_org_owners.append(member)
 
@@ -207,6 +209,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def sync_org_owners(self, cfg_org_owners: list, dry: bool = False, force: bool = False) -> None:
         """Synchronise the organization owners"""
+        # Get current and configured owners
         self._get_current_org_owners()
         self._get_configured_org_owners(cfg_org_owners=cfg_org_owners)
 
@@ -263,11 +266,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     if not dry:
                         self.org.add_to_members(gh_user, "member")
 
+        # Update the current organisation owners
+        self._get_current_org_owners()
+
     # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
     def _get_org_members(self):
         """Get all ordinary members of the org"""
+        # Reset the user list, then build up new list
+        self.org_members = []
         for member in self.org.get_members(role="member"):
             self.org_members.append(member)
 

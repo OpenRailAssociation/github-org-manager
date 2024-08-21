@@ -7,3 +7,6 @@
 
 # Name of the GitHub organisation
 org_name: example-org-on-github
+# List of owners of the GitHub organisation
+org_owners:
+  - octocat

@@ -182,16 +182,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         self._get_org_members()
 
         # Get open invitations
-        open_invitations = [user.login for user in self.org.invitations()]
+        open_invitations = [user.login.lower() for user in self.org.invitations()]
 
         for team, team_attrs in self.current_teams.items():
             # Update current team members with dict[NamedUser, str (role)]
             team_attrs["members"] = self._get_current_team_members(team)
 
             # For the rest of the function however, we use just the login name
-            # for each current user
+            # for each current user. All lower-case
             current_team_members = {
-                user.login: role for user, role in team_attrs["members"].items()
+                user.login.lower(): role for user, role in team_attrs["members"].items()
             }
 
             # Handle the team not being configured locally
@@ -209,16 +209,17 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             else:
                 team_configuration = {}
 
-            # Analog to team_attrs["members"], add members and maintainers to shared
-            # dict with respective role, while maintainer role dominates
+            # Analog to team_attrs["members"], add members and maintainers to
+            # shared dict with respective role, while maintainer role dominates.
+            # All user names shall be lower-case to ease comparison
             configured_users: dict[str, str] = {}
             for config_role in ("member", "maintainer"):
                 team_members = self._get_configured_team_members(
                     team_configuration, team.name, config_role
                 )
                 for team_member in team_members:
-                    # Add user with role to dict
-                    configured_users.update({team_member: config_role})
+                    # Add user with role to dict, in lower-case
+                    configured_users.update({team_member.lower(): config_role})
 
             # Consider all GitHub organisation team maintainers if they are member of the team
             # This is because GitHub API returns them as maintainers even if they are just members
@@ -227,7 +228,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     logging.debug(
                         "Overriding role of organisation owner '%s' to maintainer", user.login
                     )
-                    configured_users[user.login] = "maintainer"
+                    configured_users[user.login.lower()] = "maintainer"
 
             # Only make edits to the team membership if the current state differs from config
             if configured_users == current_team_members:
@@ -278,8 +279,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             # Loop through all current members. Remove them if they are not configured
             for current_user in current_team_members:
                 if current_user not in configured_users:
+                    logging.debug("User '%s' not found within configured users", current_user)
                     # Turn user to GitHub object, trying to find them
                     if not (gh_user := self._resolve_gh_username(current_user, team.name)):
+                        # If the user cannot be found for some reason, log an
+                        # error and skip this loop
                         continue
                     if team.has_in_members(gh_user):
                         logging.info(
@@ -471,7 +475,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         """Combine multiple lists into one while removing duplicates"""
         complete = []
         for single_list in lists:
-            complete.extend(single_list)
+            if single_list is not None:
+                complete.extend(single_list)
+            else:
+                logging.debug(
+                    "A list that we attempted to extend to another was None. "
+                    "This probably happened because a 'member:' or 'maintainer:' key was left empty"
+                )
 
         return list(set(complete))
 
@@ -561,7 +571,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             )
                         )
                     else:
-                        self.configured_repos_collaborators[repo][team_member] = perm
+                        self.configured_repos_collaborators[repo][team_member.lower()] = perm
 
     def _convert_graphql_perm_to_rest(self, permission: str) -> str:
         """Convert a repo permission coming from the GraphQL API to the ones
@@ -627,12 +637,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         # Extract relevant data
         for collaborator in collaborators:
-            login = collaborator["node"]["login"]
+            login: str = collaborator["node"]["login"]
             # Skip entry if collaborator is org owner, which is "admin" anyway
-            if login in [user.login for user in self.org_owners]:
+            if login.lower() in [user.login.lower() for user in self.org_owners]:
                 continue
             permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
-            self.current_repos_collaborators[repo][login] = permission
+            self.current_repos_collaborators[repo][login.lower()] = permission
 
     def _get_current_repos_and_user_perms(self):
         """Get all repos, their current collaborators and their permissions"""

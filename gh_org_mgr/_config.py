@@ -86,7 +86,8 @@ def _read_config_file(file: str) -> dict:
 
 
 def parse_config_files(path: str) -> tuple[dict, dict, dict]:
-    """Parse all relevant files in the configuration directory"""
+    """Parse all relevant files in the configuration directory. Returns a tuple
+    of org config, app config, and merged teams config"""
     # Find the relevant config files for app, org, and teams
     cfg_app_files = _find_matching_files(path, APP_CONFIG_FILE, only_one=True)
     cfg_org_files = _find_matching_files(path, ORG_CONFIG_FILE, only_one=True)

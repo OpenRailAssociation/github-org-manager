@@ -112,6 +112,8 @@ def main():
 
         # Create teams that aren't present at Github yet
         org.create_missing_teams(dry=args.dry)
+        # Synchronise organisation owners
+        org.sync_org_owners(dry=args.dry, cfg_org_owners=cfg_org.get("org_owners"))
         # Synchronise the team memberships
         org.sync_teams_members(dry=args.dry)
         # Report about organisation members that do not belong to any team

@@ -35,6 +35,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     archived_repos: list[Repository] = field(default_factory=list)
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
 
+    # Re-usable Constants
+    TEAM_CONFIG_FIELDS = ["privacy", "description", "notification_setting"]
+
     # --------------------------------------------------------------------------
     # Helper functions
     # --------------------------------------------------------------------------
@@ -144,10 +147,14 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     # --------------------------------------------------------------------------
     def consolidate_team_config(self, default_team_configs: dict[str, str]) -> None:
         """Complete teams configuration with default teams configs"""
-        team_config_fields = {"privacy": "", "description": "", "notification_setting": ""}
         for team_name, team_config in self.configured_teams.items():
+            # Handle none team configs
+            if team_config is None:
+                team_config = {}
 
-            for cfg in team_config_fields:
+            # Iterate through configurable team settings. Take team config, fall
+            # back to default org-wide value. Keep empty if none of them applies
+            for cfg in self.TEAM_CONFIG_FIELDS:
                 if tcfg := team_config.get(cfg):
                     team_config[cfg] = tcfg
                 elif dcfg := default_team_configs.get(cfg):
@@ -205,6 +212,40 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         # Re-scan current teams as new ones may have been created
         self._get_current_teams()
+
+    def sync_current_teams_settings(self, dry: bool = False) -> None:
+        """Sync settings for the existing teams: description, visibility etc."""
+        for team in self.current_teams:
+            # Skip unconfigured teams
+            if team.name not in self.configured_teams:
+                logging.debug(
+                    "Will not sync settings of team '%s' as not configured locally", team.name
+                )
+                continue
+
+            # Use dictionary comprehensions to build the dictionaries
+            configured_team_configs = {
+                key: self.configured_teams[team.name].get(key) for key in self.TEAM_CONFIG_FIELDS
+            }
+            current_team_configs = {key: getattr(team, key) for key in self.TEAM_CONFIG_FIELDS}
+
+            # Log the comparison result
+            logging.debug(
+                "Comparing team '%s' settings: Configured '%s' vs. Current '%s'",
+                team.name,
+                configured_team_configs,
+                current_team_configs,
+            )
+
+            # Compare settings and update if necessary
+            if configured_team_configs == current_team_configs:
+                logging.info("Team '%s' settings are in sync, no changes", team.name)
+            else:
+                logging.info(
+                    "Updating team '%s' settings as they differ from the configuration", team.name
+                )
+                if not dry:
+                    team.edit(name=team.name, **configured_team_configs)
 
     # --------------------------------------------------------------------------
     # Owners

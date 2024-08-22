@@ -23,7 +23,6 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     gh: Github = None  # type: ignore
     org: Organization = None  # type: ignore
     gh_token: str = ""
-    default_settings: dict[str, dict[str, str]] = field(default_factory=dict)
     default_repository_permission: str = ""
     current_org_owners: list[NamedUser] = field(default_factory=list)
     configured_org_owners: list[str] = field(default_factory=list)
@@ -141,6 +140,24 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         return gh_user
 
     # --------------------------------------------------------------------------
+    # Configuration
+    # --------------------------------------------------------------------------
+    def consolidate_team_config(self, default_team_configs: dict[str, str]) -> None:
+        """Complete teams configuration with default teams configs"""
+        team_config_fields = {"privacy": "", "description": "", "notification_setting": ""}
+        for team_name, team_config in self.configured_teams.items():
+
+            for cfg in team_config_fields:
+                if tcfg := team_config.get(cfg):
+                    team_config[cfg] = tcfg
+                elif dcfg := default_team_configs.get(cfg):
+                    team_config[cfg] = dcfg
+                else:
+                    team_config[cfg] = ""
+
+            logging.debug("Configuration for team '%s' consolidated to: %s", team_name, team_config)
+
+    # --------------------------------------------------------------------------
     # Teams
     # --------------------------------------------------------------------------
     def _get_current_teams(self):
@@ -169,13 +186,18 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                             parent_team_id=parent_id,
                             # Hardcode privacy as "secret" is not possible in child teams
                             privacy="closed",
+                            description=attributes.get("description", ""),
+                            notification_setting=attributes.get("notification_setting", ""),
                         )
 
                 else:
                     logging.info("Creating team '%s' without parent", team)
                     if not dry:
                         self.org.create_team(
-                            team, privacy=self.default_settings.get("team", {}).get("privacy", "")
+                            team,
+                            privacy=attributes.get("privacy", ""),
+                            description=attributes.get("description", ""),
+                            notification_setting=attributes.get("notification_setting", ""),
                         )
 
             else:
@@ -385,7 +407,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
             # Only make edits to the team membership if the current state differs from config
             if configured_users == current_team_members:
-                logging.info("Team '%s' configuration is in sync, no changes", team.name)
+                logging.info("Team '%s' memberships are in sync, no changes", team.name)
                 continue
 
             # Loop through the configured users, add / update them if necessary

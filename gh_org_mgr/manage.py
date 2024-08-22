@@ -107,7 +107,9 @@ def main():
             )
             sys.exit(1)
         org.configured_org_owners = cfg_org.get("org_owners", [])
-        org.default_settings = cfg_org.get("defaults", {})
+        org.consolidate_team_config(
+            default_team_configs=cfg_org.get("defaults", {}).get("team", {})
+        )
 
         # Login to GitHub with token, get GitHub organisation
         org.login(cfg_org.get("org_name", ""), cfg_app.get("github_token", ""))

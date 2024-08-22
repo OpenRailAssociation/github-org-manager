@@ -36,7 +36,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # Re-usable Constants
-    TEAM_CONFIG_FIELDS = ["privacy", "description", "notification_setting"]
+    TEAM_CONFIG_FIELDS = ["parent", "privacy", "description", "notification_setting"]
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -213,8 +213,34 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # Re-scan current teams as new ones may have been created
         self._get_current_teams()
 
+    def _prepare_team_config_for_sync(
+        self, team_config: dict[str, str | Team]
+    ) -> dict[str, str | Team]:
+        """Turn parent values into IDs"""
+        if parent := team_config["parent"]:
+            # team coming from API request (current)
+            if isinstance(parent, Team):
+                team_config["parent_team_id"] = parent.id
+            # team coming from config, and valid string
+            elif isinstance(parent, str) and parent:
+                team_config["parent_team_id"] = self.org.get_team_by_slug(
+                    self._sluggify_teamname(parent)
+                ).id
+            # empty from string, so probably default value
+            elif isinstance(parent, str) and not parent:
+                team_config["parent_team_id"] = None
+        else:
+            team_config["parent_team_id"] = None
+
+        # Remove key
+        team_config.pop("parent", None)
+
+        # Sort dict and return
+        return dict(sorted(team_config.items()))
+
     def sync_current_teams_settings(self, dry: bool = False) -> None:
         """Sync settings for the existing teams: description, visibility etc."""
+        # TODO: Handle no-secret error for child and parent teams
         for team in self.current_teams:
             # Skip unconfigured teams
             if team.name not in self.configured_teams:
@@ -228,6 +254,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                 key: self.configured_teams[team.name].get(key) for key in self.TEAM_CONFIG_FIELDS
             }
             current_team_configs = {key: getattr(team, key) for key in self.TEAM_CONFIG_FIELDS}
+
+            configured_team_configs = self._prepare_team_config_for_sync(configured_team_configs)
+            current_team_configs = self._prepare_team_config_for_sync(current_team_configs)
 
             # Log the comparison result
             logging.debug(

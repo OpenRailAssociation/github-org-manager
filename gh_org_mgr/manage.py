@@ -133,7 +133,7 @@ def main():
         org.sync_repo_collaborator_permissions(dry=args.dry)
 
         # Debug output
-        logging.debug("Final dataclass:\n%s", org.df2json())
+        logging.debug("Final dataclass:\n%s", org.pretty_print_dataclass())
         org.ratelimit()
 
     # Setup Team command

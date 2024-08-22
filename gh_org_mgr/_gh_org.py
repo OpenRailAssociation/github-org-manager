@@ -5,9 +5,10 @@
 """Class for the GitHub organization which contains most of the logic"""
 
 import logging
+import sys
 from dataclasses import asdict, dataclass, field
 
-from github import Github, UnknownObjectException
+from github import Github, GithubException, UnknownObjectException
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository
@@ -17,7 +18,7 @@ from ._gh_api import get_github_token, run_graphql_query
 
 
 @dataclass
-class GHorg:  # pylint: disable=too-many-instance-attributes
+class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     """Dataclass holding GH organization data and functions"""
 
     gh: Github = None  # type: ignore
@@ -62,9 +63,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             "Current rate limit: %s/%s (reset: %s)", core.remaining, core.limit, core.reset
         )
 
-    def df2json(self) -> str:
-        """Convert the dataclass to a JSON string"""
-        d = asdict(self)
+    def pretty_print_dict(self, dictionary: dict) -> str:
+        """Convert a dict to a pretty-printed output"""
 
         # Censor sensible fields
         def censor_half_string(string: str) -> str:
@@ -75,7 +75,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         sensible_keys = ["gh_token"]
         for key in sensible_keys:
-            d[key] = censor_half_string(d.get(key, ""))
+            if value := dictionary.get(key, ""):
+                dictionary[key] = censor_half_string(value)
 
         # Print dict nicely
         def pretty(d, indent=0):
@@ -89,7 +90,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
             return string
 
-        return pretty(d)
+        return pretty(dictionary)
+
+    def pretty_print_dataclass(self) -> str:
+        """Convert this dataclass to a pretty-printed output"""
+        return self.pretty_print_dict(asdict(self))
 
     def compare_two_lists(self, list1: list[str], list2: list[str]):
         """
@@ -240,7 +245,6 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
     def sync_current_teams_settings(self, dry: bool = False) -> None:
         """Sync settings for the existing teams: description, visibility etc."""
-        # TODO: Handle no-secret error for child and parent teams
         for team in self.current_teams:
             # Skip unconfigured teams
             if team.name not in self.configured_teams:
@@ -274,7 +278,15 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     "Updating team '%s' settings as they differ from the configuration", team.name
                 )
                 if not dry:
-                    team.edit(name=team.name, **configured_team_configs)
+                    try:
+                        team.edit(name=team.name, **configured_team_configs)
+                    except GithubException as exc:
+                        logging.critical(
+                            "Team '%s' settings could not be edited. Error: \n%s",
+                            team.name,
+                            self.pretty_print_dict(exc.data),
+                        )
+                        sys.exit(1)
 
     # --------------------------------------------------------------------------
     # Owners

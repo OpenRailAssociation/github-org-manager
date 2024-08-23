@@ -18,12 +18,19 @@ The basic principle: all settings reside in YAML configuration files which will 
 ## Features
 
 * Manage GitHub organization owners
-* Manage GitHub teams and their members and maintainers
-* Support of sub-teams
+* Manage GitHub teams, their members, maintainers and settings
+* Support of parent/child teams
 * Manage teams' permissions on organizations' repositories
 * Invite members to the organization if they aren't part of it yet
 * Warn about unmanaged teams
 * Warn about organization members who are not part of any team
+* Handle individual collaborator permissions to repositories
+
+The tool's philosophy:
+
+* All relevant configuration shall happen in the YAML configuration files, no actions in GitHub UI shall be necessary.
+* All repository permissions shall be managed by team membership. Outside collaborators and individual permissions are discouraged.
+* All teams shall be managed by this tool. While it can deal with unmanaged teams, it's not a priority and may cause warnings.
 
 Are you missing a feature? Please check whether it's [already posted as an issue](https://github.com/OpenRailAssociation/github-org-manager/issues), and create one of this isn't the case.
 

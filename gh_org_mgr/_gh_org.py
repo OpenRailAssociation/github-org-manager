@@ -233,7 +233,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 else:
                     logging.info("Creating team '%s' without parent", team)
                     if not dry:
-                        self.org.create_team(team)
+                        self.org.create_team(
+                            team,
+                            # Hardcode privacy as "secret" is not possible in
+                            # parent teams, which is the API's default
+                            privacy="closed",
+                        )
 
             else:
                 logging.debug("Team '%s' already exists", team)

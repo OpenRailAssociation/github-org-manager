@@ -116,12 +116,12 @@ def main():
         # Get current rate limit
         org.ratelimit()
 
+        # Synchronise organisation owners
+        org.sync_org_owners(dry=args.dry, force=args.force)
         # Create teams that aren't present at Github yet
         org.create_missing_teams(dry=args.dry)
         # Configure general settings of teams
         org.sync_current_teams_settings(dry=args.dry)
-        # Synchronise organisation owners
-        org.sync_org_owners(dry=args.dry, force=args.force)
         # Synchronise the team memberships
         org.sync_teams_members(dry=args.dry)
         # Report about organisation members that do not belong to any team

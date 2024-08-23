@@ -30,6 +30,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     org_members: list[NamedUser] = field(default_factory=list)
     current_teams: dict[Team, dict] = field(default_factory=dict)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
+    newly_added_users: list[NamedUser] = field(default_factory=list)
     current_repos_teams: dict[Repository, dict[Team, str]] = field(default_factory=dict)
     current_repos_collaborators: dict[Repository, dict[str, str]] = field(default_factory=dict)
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
@@ -485,6 +486,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
         return current_users
 
+    def _add_or_update_user_in_team(self, team: Team, user: NamedUser, role: str):
+        """Add or update membership of a user in a team"""
+        team.add_membership(member=user, role=role)
+        # Document that the user has just been added to a team. Relevant when we
+        # will later find users without team membership
+        self.newly_added_users.append(user)
+
     def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
         """Check the configured members of each team, add missing ones and delete unconfigured"""
         logging.debug("Starting to sync team members")
@@ -571,7 +579,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         config_role,
                     )
                     if not dry:
-                        team.add_membership(member=gh_user, role=config_role)
+                        self._add_or_update_user_in_team(team=team, user=gh_user, role=config_role)
 
                 # Update roles if they differ from old role
                 elif config_role != current_team_members.get(config_user, ""):
@@ -585,7 +593,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         config_role,
                     )
                     if not dry:
-                        team.add_membership(member=gh_user, role=config_role)
+                        self._add_or_update_user_in_team(team=team, user=gh_user, role=config_role)
 
             # Loop through all current members. Remove them if they are not configured
             for current_user in current_team_members:
@@ -618,11 +626,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         all_org_members = set(self.org_members + self.current_org_owners)
 
         # Get all members of all teams
-        all_team_members_lst = []
+        all_team_members_lst: list[NamedUser] = []
         for _, team_attrs in self.current_teams.items():
             for member in team_attrs.get("members", {}):
                 all_team_members_lst.append(member)
-        all_team_members = set(all_team_members_lst)
+        # Also add users that have just been added to a team, and unify them
+        all_team_members: set[NamedUser] = set(all_team_members_lst + self.newly_added_users)
 
         # Find members that are in org_members but not team_members
         members_without_team = all_org_members.difference(all_team_members)

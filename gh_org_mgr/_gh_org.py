@@ -37,7 +37,12 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # Re-usable Constants
-    TEAM_CONFIG_FIELDS = ["parent", "privacy", "description", "notification_setting"]
+    TEAM_CONFIG_FIELDS = {
+        "parent": {"fallback_value": None},
+        "privacy": {"fallback_value": "<keep-current>"},
+        "description": {"fallback_value": "<keep-current>"},
+        "notification_setting": {"fallback_value": "<keep-current>"},
+    }
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -158,14 +163,21 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 team_config = {}
 
             # Iterate through configurable team settings. Take team config, fall
-            # back to default org-wide value. Keep empty if none of them applies
-            for cfg in self.TEAM_CONFIG_FIELDS:
-                if tcfg := team_config.get(cfg):
-                    team_config[cfg] = tcfg
-                elif dcfg := default_team_configs.get(cfg):
-                    team_config[cfg] = dcfg
+            # back to default org-wide value. If no config can be found, either
+            # add a fallback value or do not add this setting altogether.
+            for cfg_item, cfg_value in self.TEAM_CONFIG_FIELDS.items():
+                # Case 1: setting in team config
+                if tcfg := team_config.get(cfg_item):
+                    team_config[cfg_item] = tcfg
+                # Case 2: setting in default org team config
+                elif dcfg := default_team_configs.get(cfg_item):
+                    team_config[cfg_item] = dcfg
+                # Case 3: setting defined nowhere, take hardcoded default
                 else:
-                    team_config[cfg] = ""
+                    # Look which fallback value/action shall be taken
+                    fallback_value = cfg_value["fallback_value"]
+                    if fallback_value != "<keep-current>":
+                        team_config[cfg_item] = fallback_value
 
             logging.debug("Configuration for team '%s' consolidated to: %s", team_name, team_config)
 
@@ -192,25 +204,20 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     parent_id = self.org.get_team_by_slug(self._sluggify_teamname(parent)).id
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
+                    # NOTE: We do not specify any team settings (description etc)
+                    # here, this will happen later
                     if not dry:
                         self.org.create_team(
                             team,
                             parent_team_id=parent_id,
                             # Hardcode privacy as "secret" is not possible in child teams
                             privacy="closed",
-                            description=attributes.get("description", ""),
-                            notification_setting=attributes.get("notification_setting", ""),
                         )
 
                 else:
                     logging.info("Creating team '%s' without parent", team)
                     if not dry:
-                        self.org.create_team(
-                            team,
-                            privacy=attributes.get("privacy", ""),
-                            description=attributes.get("description", ""),
-                            notification_setting=attributes.get("notification_setting", ""),
-                        )
+                        self.org.create_team(team)
 
             else:
                 logging.debug("Team '%s' already exists", team)
@@ -219,9 +226,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         self._get_current_teams()
 
     def _prepare_team_config_for_sync(
-        self, team_config: dict[str, str | Team]
-    ) -> dict[str, str | Team]:
-        """Turn parent values into IDs"""
+        self, team_config: dict[str, str | int | Team]
+    ) -> dict[str, str | int | None]:
+        """Turn parent values into IDs, and sort the config dictionary for better comparison"""
         if parent := team_config["parent"]:
             # team coming from API request (current)
             if isinstance(parent, Team):
@@ -237,7 +244,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         else:
             team_config["parent_team_id"] = None
 
-        # Remove key
+        # Remove parent key
         team_config.pop("parent", None)
 
         # Sort dict and return
@@ -253,12 +260,27 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 )
                 continue
 
-            # Use dictionary comprehensions to build the dictionaries
+            # Use dictionary comprehensions to build the dictionaries with the
+            # relevant team settings for comparison
             configured_team_configs = {
-                key: self.configured_teams[team.name].get(key) for key in self.TEAM_CONFIG_FIELDS
+                key: self.configured_teams[team.name].get(key)
+                for key in self.TEAM_CONFIG_FIELDS
+                # Only add keys that are actually in the configuration. Deals
+                # with settings that should be changed, as they are neither
+                # defined in the default or team config, and marked as
+                # <keep-current>
+                if key in self.configured_teams[team.name]
             }
-            current_team_configs = {key: getattr(team, key) for key in self.TEAM_CONFIG_FIELDS}
+            current_team_configs = {
+                key: getattr(team, key)
+                for key in self.TEAM_CONFIG_FIELDS
+                # Only compare current team settings with keys that are defined
+                # as the configured team settings. Taking out settings that
+                # shall not be changed
+                if key in self.configured_teams[team.name]
+            }
 
+            # Resolve parent team id from parent Team object or team string, and sort
             configured_team_configs = self._prepare_team_config_for_sync(configured_team_configs)
             current_team_configs = self._prepare_team_config_for_sync(current_team_configs)
 

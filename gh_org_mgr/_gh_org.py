@@ -139,6 +139,20 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         # Return the result as a tuple
         return (missing_in_list1, common_elements, missing_in_list2)
 
+    def compare_two_dicts(self, dict1: dict, dict2: dict) -> dict[str, dict[str, str | int | None]]:
+        """Compares two dictionaries. Assume that the keys are the same. Output
+        a dict with keys that have differing values"""
+        # Create an empty dictionary to store differences
+        differences = {}
+
+        # Iterate through the keys (assuming both dictionaries have the same keys)
+        for key in dict1:
+            # Compare the values for each key
+            if dict1[key] != dict2[key]:
+                differences[key] = {"dict1": dict1[key], "dict2": dict2[key]}
+
+        return differences
+
     def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
         """Turn a username into a proper GitHub user object"""
         try:
@@ -299,12 +313,17 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             )
 
             # Compare settings and update if necessary
-            if configured_team_configs == current_team_configs:
-                logging.info("Team '%s' settings are in sync, no changes", team.name)
-            else:
+            if differences := self.compare_two_dicts(configured_team_configs, current_team_configs):
+                # Log differences
                 logging.info(
-                    "Updating team '%s' settings as they differ from the configuration", team.name
+                    "Team settings for '%s' differ from the configuration. Updating them:",
+                    team.name,
                 )
+                for setting, diff in differences.items():
+                    logging.info(
+                        "Setting '%s': '%s' --> '%s'", setting, diff["dict2"], diff["dict1"]
+                    )
+                # Execute team setting changes
                 if not dry:
                     try:
                         team.edit(name=team.name, **configured_team_configs)  # type: ignore
@@ -315,6 +334,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             self.pretty_print_dict(exc.data),
                         )
                         sys.exit(1)
+            else:
+                logging.info("Team '%s' settings are in sync, no changes", team.name)
 
     # --------------------------------------------------------------------------
     # Owners

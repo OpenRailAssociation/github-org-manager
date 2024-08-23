@@ -4,7 +4,7 @@
 
 [tool.poetry]
 name = "github-org-manager"
-version = "0.4.1"
+version = "0.5.0"
 description = "Manage a GitHub Organization, its teams, repository permissions, and more"
 authors = ["Max Mehl <max.mehl@deutschebahn.com>"]
 readme = "README.md"

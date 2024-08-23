@@ -876,6 +876,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
                 # Add team member to repo with their repo permissions
                 for team_member in team_members:
+                    # Lower-case team member
+                    team_member = team_member.lower()
                     # Check if permissions already exist
                     if self.configured_repos_collaborators[repo].get(team_member, {}):
                         logging.debug(
@@ -891,7 +893,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             )
                         )
                     else:
-                        self.configured_repos_collaborators[repo][team_member.lower()] = perm
+                        self.configured_repos_collaborators[repo][team_member] = perm
 
     def _convert_graphql_perm_to_rest(self, permission: str) -> str:
         """Convert a repo permission coming from the GraphQL API to the ones

@@ -37,12 +37,14 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
 
     # Re-usable Constants
-    TEAM_CONFIG_FIELDS = {
-        "parent": {"fallback_value": None},
-        "privacy": {"fallback_value": "<keep-current>"},
-        "description": {"fallback_value": "<keep-current>"},
-        "notification_setting": {"fallback_value": "<keep-current>"},
-    }
+    TEAM_CONFIG_FIELDS: dict[str, dict[str, str | None]] = field(  # pylint: disable=invalid-name
+        default_factory=lambda: {
+            "parent": {"fallback_value": None},
+            "privacy": {"fallback_value": "<keep-current>"},
+            "description": {"fallback_value": "<keep-current>"},
+            "notification_setting": {"fallback_value": "<keep-current>"},
+        }
+    )
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -226,7 +228,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         self._get_current_teams()
 
     def _prepare_team_config_for_sync(
-        self, team_config: dict[str, str | int | Team]
+        self, team_config: dict[str, str | int | Team | None]
     ) -> dict[str, str | int | None]:
         """Turn parent values into IDs, and sort the config dictionary for better comparison"""
         if parent := team_config["parent"]:
@@ -248,7 +250,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         team_config.pop("parent", None)
 
         # Sort dict and return
-        return dict(sorted(team_config.items()))
+        # Ensure the dictionary has only comparable types before sorting
+        filtered_team_config = {
+            k: v for k, v in team_config.items() if isinstance(v, (str, int, type(None)))
+        }
+        return dict(sorted(filtered_team_config.items()))
 
     def sync_current_teams_settings(self, dry: bool = False) -> None:
         """Sync settings for the existing teams: description, visibility etc."""
@@ -263,13 +269,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             # Use dictionary comprehensions to build the dictionaries with the
             # relevant team settings for comparison
             configured_team_configs = {
-                key: self.configured_teams[team.name].get(key)
+                key: self.configured_teams[team.name].get(key)  # type: ignore
                 for key in self.TEAM_CONFIG_FIELDS
                 # Only add keys that are actually in the configuration. Deals
                 # with settings that should be changed, as they are neither
                 # defined in the default or team config, and marked as
                 # <keep-current>
-                if key in self.configured_teams[team.name]
+                if key in self.configured_teams[team.name]  # type: ignore
             }
             current_team_configs = {
                 key: getattr(team, key)
@@ -277,7 +283,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 # Only compare current team settings with keys that are defined
                 # as the configured team settings. Taking out settings that
                 # shall not be changed
-                if key in self.configured_teams[team.name]
+                if key in self.configured_teams[team.name]  # type: ignore
             }
 
             # Resolve parent team id from parent Team object or team string, and sort
@@ -301,7 +307,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 )
                 if not dry:
                     try:
-                        team.edit(name=team.name, **configured_team_configs)
+                        team.edit(name=team.name, **configured_team_configs)  # type: ignore
                     except GithubException as exc:
                         logging.critical(
                             "Team '%s' settings could not be edited. Error: \n%s",

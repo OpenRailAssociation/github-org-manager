@@ -2,7 +2,14 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # A Team with its name
-Maintainers:
+Project Team:
+  # Description of the team
+  description: "My awesome Maintainers team"
+  # Level of privacy of the team. Can be "secret" or "closed". Note: parent/child teams cannot be "secret"
+  privacy: "closed"
+  # Notification setting of the team.
+  # Can be "notifications_enabled" or "notifications_disabled"
+  notification_setting: "notifications_enabled"
   # Team maintainers, can add new people and change team settings
   maintainer:
     - octocat
@@ -13,12 +20,15 @@ Maintainers:
   # The repositories the team shall have access to with a certain permission
   # Can be one of: pull, triage, push, maintain, admin
   repos:
-    cool-repository: admin
-    other-repo: admin
+    cool-repository: push
+    other-repo: push
 
-Subproject:
+Project Maintainers:
+  # Make this a child team of the provided parent. Note: You should first
+  # describe parents in this file, then children
   parent: Maintainers
   member:
-    - user2
+    - octocat
   repos:
-    cool-repository: maintain
+    cool-repository: admin
+    other-repo: maintain

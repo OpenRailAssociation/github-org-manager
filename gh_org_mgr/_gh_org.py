@@ -5,9 +5,10 @@
 """Class for the GitHub organization which contains most of the logic"""
 
 import logging
+import sys
 from dataclasses import asdict, dataclass, field
 
-from github import Github, UnknownObjectException
+from github import Github, GithubException, UnknownObjectException
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository
@@ -17,7 +18,7 @@ from ._gh_api import get_github_token, run_graphql_query
 
 
 @dataclass
-class GHorg:  # pylint: disable=too-many-instance-attributes
+class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     """Dataclass holding GH organization data and functions"""
 
     gh: Github = None  # type: ignore
@@ -34,6 +35,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository] = field(default_factory=list)
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
+
+    # Re-usable Constants
+    TEAM_CONFIG_FIELDS: dict[str, dict[str, str | None]] = field(  # pylint: disable=invalid-name
+        default_factory=lambda: {
+            "parent": {"fallback_value": None},
+            "privacy": {"fallback_value": "<keep-current>"},
+            "description": {"fallback_value": "<keep-current>"},
+            "notification_setting": {"fallback_value": "<keep-current>"},
+        }
+    )
 
     # --------------------------------------------------------------------------
     # Helper functions
@@ -59,9 +70,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             "Current rate limit: %s/%s (reset: %s)", core.remaining, core.limit, core.reset
         )
 
-    def df2json(self) -> str:
-        """Convert the dataclass to a JSON string"""
-        d = asdict(self)
+    def pretty_print_dict(self, dictionary: dict) -> str:
+        """Convert a dict to a pretty-printed output"""
 
         # Censor sensible fields
         def censor_half_string(string: str) -> str:
@@ -72,7 +82,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
         sensible_keys = ["gh_token"]
         for key in sensible_keys:
-            d[key] = censor_half_string(d.get(key, ""))
+            if value := dictionary.get(key, ""):
+                dictionary[key] = censor_half_string(value)
 
         # Print dict nicely
         def pretty(d, indent=0):
@@ -86,7 +97,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
             return string
 
-        return pretty(d)
+        return pretty(dictionary)
+
+    def pretty_print_dataclass(self) -> str:
+        """Convert this dataclass to a pretty-printed output"""
+        return self.pretty_print_dict(asdict(self))
 
     def compare_two_lists(self, list1: list[str], list2: list[str]):
         """
@@ -124,6 +139,20 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         # Return the result as a tuple
         return (missing_in_list1, common_elements, missing_in_list2)
 
+    def compare_two_dicts(self, dict1: dict, dict2: dict) -> dict[str, dict[str, str | int | None]]:
+        """Compares two dictionaries. Assume that the keys are the same. Output
+        a dict with keys that have differing values"""
+        # Create an empty dictionary to store differences
+        differences = {}
+
+        # Iterate through the keys (assuming both dictionaries have the same keys)
+        for key in dict1:
+            # Compare the values for each key
+            if dict1[key] != dict2[key]:
+                differences[key] = {"dict1": dict1[key], "dict2": dict2[key]}
+
+        return differences
+
     def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
         """Turn a username into a proper GitHub user object"""
         try:
@@ -138,6 +167,35 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             return None
 
         return gh_user
+
+    # --------------------------------------------------------------------------
+    # Configuration
+    # --------------------------------------------------------------------------
+    def consolidate_team_config(self, default_team_configs: dict[str, str]) -> None:
+        """Complete teams configuration with default teams configs"""
+        for team_name, team_config in self.configured_teams.items():
+            # Handle none team configs
+            if team_config is None:
+                team_config = {}
+
+            # Iterate through configurable team settings. Take team config, fall
+            # back to default org-wide value. If no config can be found, either
+            # add a fallback value or do not add this setting altogether.
+            for cfg_item, cfg_value in self.TEAM_CONFIG_FIELDS.items():
+                # Case 1: setting in team config
+                if tcfg := team_config.get(cfg_item):
+                    team_config[cfg_item] = tcfg
+                # Case 2: setting in default org team config
+                elif dcfg := default_team_configs.get(cfg_item):
+                    team_config[cfg_item] = dcfg
+                # Case 3: setting defined nowhere, take hardcoded default
+                else:
+                    # Look which fallback value/action shall be taken
+                    fallback_value = cfg_value["fallback_value"]
+                    if fallback_value != "<keep-current>":
+                        team_config[cfg_item] = fallback_value
+
+            logging.debug("Configuration for team '%s' consolidated to: %s", team_name, team_config)
 
     # --------------------------------------------------------------------------
     # Teams
@@ -162,19 +220,127 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
                     parent_id = self.org.get_team_by_slug(self._sluggify_teamname(parent)).id
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
+                    # NOTE: We do not specify any team settings (description etc)
+                    # here, this will happen later
                     if not dry:
-                        self.org.create_team(team, parent_team_id=parent_id)
+                        self.org.create_team(
+                            team,
+                            parent_team_id=parent_id,
+                            # Hardcode privacy as "secret" is not possible in child teams
+                            privacy="closed",
+                        )
 
                 else:
                     logging.info("Creating team '%s' without parent", team)
                     if not dry:
-                        self.org.create_team(team, privacy="closed")
+                        self.org.create_team(
+                            team,
+                            # Hardcode privacy as "secret" is not possible in
+                            # parent teams, which is the API's default
+                            privacy="closed",
+                        )
 
             else:
                 logging.debug("Team '%s' already exists", team)
 
         # Re-scan current teams as new ones may have been created
         self._get_current_teams()
+
+    def _prepare_team_config_for_sync(
+        self, team_config: dict[str, str | int | Team | None]
+    ) -> dict[str, str | int | None]:
+        """Turn parent values into IDs, and sort the config dictionary for better comparison"""
+        if parent := team_config["parent"]:
+            # team coming from API request (current)
+            if isinstance(parent, Team):
+                team_config["parent_team_id"] = parent.id
+            # team coming from config, and valid string
+            elif isinstance(parent, str) and parent:
+                team_config["parent_team_id"] = self.org.get_team_by_slug(
+                    self._sluggify_teamname(parent)
+                ).id
+            # empty from string, so probably default value
+            elif isinstance(parent, str) and not parent:
+                team_config["parent_team_id"] = None
+        else:
+            team_config["parent_team_id"] = None
+
+        # Remove parent key
+        team_config.pop("parent", None)
+
+        # Sort dict and return
+        # Ensure the dictionary has only comparable types before sorting
+        filtered_team_config = {
+            k: v for k, v in team_config.items() if isinstance(v, (str, int, type(None)))
+        }
+        return dict(sorted(filtered_team_config.items()))
+
+    def sync_current_teams_settings(self, dry: bool = False) -> None:
+        """Sync settings for the existing teams: description, visibility etc."""
+        for team in self.current_teams:
+            # Skip unconfigured teams
+            if team.name not in self.configured_teams:
+                logging.debug(
+                    "Will not sync settings of team '%s' as not configured locally", team.name
+                )
+                continue
+
+            # Use dictionary comprehensions to build the dictionaries with the
+            # relevant team settings for comparison
+            configured_team_configs = {
+                key: self.configured_teams[team.name].get(key)  # type: ignore
+                for key in self.TEAM_CONFIG_FIELDS
+                # Only add keys that are actually in the configuration. Deals
+                # with settings that should be changed, as they are neither
+                # defined in the default or team config, and marked as
+                # <keep-current>
+                if key in self.configured_teams[team.name]  # type: ignore
+            }
+            current_team_configs = {
+                key: getattr(team, key)
+                for key in self.TEAM_CONFIG_FIELDS
+                # Only compare current team settings with keys that are defined
+                # as the configured team settings. Taking out settings that
+                # shall not be changed
+                if key in self.configured_teams[team.name]  # type: ignore
+            }
+
+            # Resolve parent team id from parent Team object or team string, and sort
+            configured_team_configs = self._prepare_team_config_for_sync(configured_team_configs)
+            current_team_configs = self._prepare_team_config_for_sync(current_team_configs)
+
+            # Log the comparison result
+            logging.debug(
+                "Comparing team '%s' settings: Configured '%s' vs. Current '%s'",
+                team.name,
+                configured_team_configs,
+                current_team_configs,
+            )
+
+            # Compare settings and update if necessary
+            if differences := self.compare_two_dicts(configured_team_configs, current_team_configs):
+                # Log differences
+                logging.info(
+                    "Team settings for '%s' differ from the configuration. Updating them:",
+                    team.name,
+                )
+                for setting, diff in differences.items():
+                    logging.info(
+                        "Setting '%s': '%s' --> '%s'", setting, diff["dict2"], diff["dict1"]
+                    )
+                # Execute team setting changes
+                if not dry:
+                    try:
+                        team.edit(name=team.name, **configured_team_configs)  # type: ignore
+                    except GithubException as exc:
+                        logging.critical(
+                            "Team '%s' settings could not be edited. Error: \n%s",
+                            team.name,
+                            self.pretty_print_dict(exc.data),
+                        )
+                        sys.exit(1)
+            else:
+                logging.info("Team '%s' settings are in sync, no changes", team.name)
 
     # --------------------------------------------------------------------------
     # Owners
@@ -186,20 +352,19 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
         for member in self.org.get_members(role="admin"):
             self.current_org_owners.append(member)
 
-    def _get_configured_org_owners(self, cfg_org_owners: list[str] | str | None) -> None:
-        """Import configured owners for the organization from the org configuration"""
+    def _check_configured_org_owners(self) -> bool:
+        """Check configured owners and make them lower-case for better
+        comparison. Returns True if owners are well configured."""
         # Add configured owners if they are a list
-        if isinstance(cfg_org_owners, list):
-            # Import users to dataclass attribute, lower-case
-            for user in cfg_org_owners:
-                self.configured_org_owners.append(user.lower())
+        if isinstance(self.configured_org_owners, list):
+            # Make all configured users lower-case
+            self.configured_org_owners = [user.lower() for user in self.configured_org_owners]
         else:
             logging.warning(
                 "The organisation owners are not configured as a proper list. Will not handle them."
             )
+            self.configured_org_owners = []
 
-    def _check_non_empty_configured_owners(self) -> bool:
-        """Handle if there are no configured owners. Returns True if owners are configured."""
         if not self.configured_org_owners:
             logging.warning(
                 "No owners for your GitHub organisation configured. Will not make any "
@@ -216,14 +381,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
             return True
         return False
 
-    def sync_org_owners(self, cfg_org_owners: list, dry: bool = False, force: bool = False) -> None:
+    def sync_org_owners(self, dry: bool = False, force: bool = False) -> None:
         """Synchronise the organization owners"""
         # Get current and configured owners
         self._get_current_org_owners()
-        self._get_configured_org_owners(cfg_org_owners=cfg_org_owners)
 
-        # Abort owner synchronisation if there are no configured owners
-        if not self._check_non_empty_configured_owners():
+        # Abort owner synchronisation if no owners are configured, or badly
+        if not self._check_configured_org_owners():
             return
 
         # Get differences between the current and configured owners
@@ -379,7 +543,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes
 
             # Only make edits to the team membership if the current state differs from config
             if configured_users == current_team_members:
-                logging.info("Team '%s' configuration is in sync, no changes", team.name)
+                logging.info("Team '%s' memberships are in sync, no changes", team.name)
                 continue
 
             # Loop through the configured users, add / update them if necessary

@@ -106,6 +106,10 @@ def main():
                 "No GitHub organisation name configured in organisation settings. Cannot continue"
             )
             sys.exit(1)
+        org.configured_org_owners = cfg_org.get("org_owners", [])
+        org.consolidate_team_config(
+            default_team_configs=cfg_org.get("defaults", {}).get("team", {})
+        )
 
         # Login to GitHub with token, get GitHub organisation
         org.login(cfg_org.get("org_name", ""), cfg_app.get("github_token", ""))
@@ -114,10 +118,10 @@ def main():
 
         # Create teams that aren't present at Github yet
         org.create_missing_teams(dry=args.dry)
+        # Configure general settings of teams
+        org.sync_current_teams_settings(dry=args.dry)
         # Synchronise organisation owners
-        org.sync_org_owners(
-            cfg_org_owners=cfg_org.get("org_owners"), dry=args.dry, force=args.force
-        )
+        org.sync_org_owners(dry=args.dry, force=args.force)
         # Synchronise the team memberships
         org.sync_teams_members(dry=args.dry)
         # Report about organisation members that do not belong to any team
@@ -129,7 +133,7 @@ def main():
         org.sync_repo_collaborator_permissions(dry=args.dry)
 
         # Debug output
-        logging.debug("Final dataclass:\n%s", org.df2json())
+        logging.debug("Final dataclass:\n%s", org.pretty_print_dataclass())
         org.ratelimit()
 
     # Setup Team command

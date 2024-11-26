@@ -39,7 +39,22 @@ def run_graphql_query(query, variables, token):
         headers=headers,
         timeout=10,
     )
-    if request.status_code == 200:
-        return request.json()
 
-    sys.exit(f"Query failed to run by returning code of {query}: {request.status_code}")
+    # Get JSON result
+    json_return = "No valid JSON return"
+    try:
+        json_return = request.json()
+    except requests.exceptions.JSONDecodeError:
+        pass
+
+    if request.status_code == 200:
+        return json_return
+
+    # Debug information in case of errors
+    print(
+        f"Query failed with HTTP error code '{request.status_code}' when running "
+        f"this query: {query}\n"
+        f"Return: {json_return}\n"
+        f"Headers: {request.headers}"
+    )
+    sys.exit(1)

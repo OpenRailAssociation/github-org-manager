@@ -112,7 +112,12 @@ def main():
         )
 
         # Login to GitHub with token, get GitHub organisation
-        org.login(cfg_org.get("org_name", ""), cfg_app.get("github_token", ""))
+        org.login(
+            orgname=cfg_org.get("org_name", ""),
+            token=cfg_app.get("github_token", ""),
+            app_id=cfg_app.get("github_app_id", ""),
+            app_private_key=cfg_app.get("github_app_private_key", ""),
+        )
         # Get current rate limit
         org.ratelimit()
 

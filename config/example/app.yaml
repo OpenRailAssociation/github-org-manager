@@ -7,3 +7,34 @@
 
 # Personal Oauth access token with required scopes
 github_token: ghp_abcdefg123
+
+# GitHub App (if this is set, the personal access token (github_token) will be ignored)
+github_app_id: 123456
+github_app_private_key: |
+  -----BEGIN RSA PRIVATE KEY-----
+  THIS IS JUST AN EXAMPLE KEY, DO NOT USE IT IN PRODUCTION 1234567
+  MIIEowIBAAKCAQEAxkYIq1pp+OH+KTa9ZSAyY0PysSZEoZyXFnwWXLhi7ZDP6pPH
+  9zUg+iVlSeEd2ZOwyBnfpWHG12QAFmbjojpcDT1mlkqv7N7YGS0z8kTp3DfgKBAd
+  Uq0V8BvTubM78NClF4xQmWodfv0hjLmArWLP4cHKPnl1I5Ml7yPUtdwm9wEFT0oe
+  QE7rnEgN8UFbjT4FQg4JvwKUNZsHfPetrXlSOyjztNE8wsRahCvzAaqUv+L//Y8I
+  fX2wUW3A97TzpfiKrPXpb8u84Er7n8cHVSTiMWhksgnQZ4ymk3bLYjNyCN+gln6t
+  qKtbsbynx77m0Q/ykYauWIfxPRBOLbEgmh9/bwIDAQABAoIBACGvOD3USHit/D4I
+  PLj3dVgD7TFHbRV/wvNg9XOfJ79wgMI7hRdsgUO+Iq0gf6+9NaVpL+Oq7tsc9B7a
+  MAYZoBXnvov9+FFnspLkaRTZvFlbbMuhoTmwii+Wqqu71Y0eBU4w2miV7JjsbEy6
+  HzBVvzd9ctyWSd5XW3R7Q+H5mu0PhLKSaHnYitJs0OajFjHg9q28gQ9olnemkaDr
+  IFOevK7LWWDEkvhV/ZyxnL+v/9oCSxgBVgmMGPe2aFHQ9Ej4cHiTrOxFvXH8D3LU
+  jaIcNQ6NA3FWBYFADKA3wY46W8NmUSt3qgQDZttydu3RMzbukGYJ3W6nP9TxLrVE
+  Yu2xIaEML8rCzUIUvwEKlADlkpr5Lz9d92NzhVndIps3FW5UFTHTz0G3fvIHNGWv
+  IPTZDNQWVs3OI1xtMQV2MGPeDINNn3Wg3WIJxMn7zXnFlLxm0vhKEPcCgYEA1vMH
+  f3NBdk9u1IclV+4dCYF7Par9ypcPE4DEutF4gtZu8pDBVmkxaqxXMS5LK++DIhQs
+  YxRhwydMK2n+cYl9bvs9MdMxMh6ZdBVOVLcSL24CzCDSTjeKVmL26j3TTNq6Mi8P
+  A/rG7CWaIDRMd4AuZZmR5M71BVy4rubK4CyzX0kCgYEAzg95WaMbMjyoYW/qjTzZ
+  7XMxtsIjIQKNDIywVRsJZGb8UKmtCdoJEAoFCSiE/ut7xCvG+MpK1c5WhvFPQyiT
+  sf6J3zME4l752Wy2WOxrPa/GFTPUj6ewBB1FjolAmSzsljTgX+e5NA7hxJ+Ly/uU
+  jbswdRYg8jQx81HYlH7v+w8CgYB6noUmdY9geIvW/YmWEaXK6Gxvj33b9jSJgam4
+  kQpYSQ9dnKpOKxAftFTBH5GObMG3zR5NHzFt7JsNIRgfmLlPeE8+fyXPW5lamVTo
+  Cs968xzxab/PEuv9v9LvaXmCnDwfqKy+Lm8QA5tax7rfaOYO235Ysp8gAfbw/4O4
+  QofI0QKBgAxXAlq/AfqpZHrz5B9V0EsnaIiSiDbFr6RVhoGN3zF4ObExee2MOmqA
+  D9zgrlJ8D4bxPrwDrCuXHY7s/1/uCX3K+mS7CWpybOcJY4XzsNznOYcMQzw22fxl
+  u1ioG/s3Ahhd778VIjj5d32Xbjj8vbSFj8vJe5bBNblYbelWfETg
+  -----END RSA PRIVATE KEY-----

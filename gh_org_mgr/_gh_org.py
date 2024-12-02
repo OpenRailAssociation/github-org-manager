@@ -8,13 +8,19 @@ import logging
 import sys
 from dataclasses import asdict, dataclass, field
 
-from github import Github, GithubException, UnknownObjectException
+from github import (
+    Auth,
+    Github,
+    GithubException,
+    GithubIntegration,
+    UnknownObjectException,
+)
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository
 from github.Team import Team
 
-from ._gh_api import get_github_token, run_graphql_query
+from ._gh_api import get_github_secrets_from_env, run_graphql_query
 
 
 @dataclass
@@ -24,6 +30,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     gh: Github = None  # type: ignore
     org: Organization = None  # type: ignore
     gh_token: str = ""
+    gh_app_id: str | int = ""
+    gh_app_private_key: str = ""
     default_repository_permission: str = ""
     current_org_owners: list[NamedUser] = field(default_factory=list)
     configured_org_owners: list[str] = field(default_factory=list)
@@ -56,18 +64,39 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         # supported, or multiple spaces etc.
         return team.replace(" ", "-")
 
-    def login(self, orgname: str, token: str) -> None:
-        """Login to GH, gather org data"""
-        self.gh_token = get_github_token(token)
-        self.gh = Github(self.gh_token)
-        logging.debug("Logged in as %s", self.gh.get_user().login)
+    def login(
+        self, orgname: str, token: str = "", app_id: str | int = "", app_private_key: str = ""
+    ) -> None:
+        """Login to GH via PAT or App, gather org data"""
+        # Get all login data from config and environment
+        self.gh_token = get_github_secrets_from_env(env_variable="GITHUB_TOKEN", secret=token)
+        self.gh_app_id = get_github_secrets_from_env(env_variable="GITHUB_APP_ID", secret=app_id)
+        self.gh_app_private_key = get_github_secrets_from_env(
+            env_variable="GITHUB_APP_PRIVATE_KEY", secret=app_private_key
+        )
+
+        # Decide how to login. If app set, prefer this
+        if self.gh_app_id and self.gh_app_private_key:
+            logging.debug("Logged in via app %s", self.gh_app_id)
+            auth = Auth.AppAuth(app_id=self.gh_app_id, private_key=self.gh_app_private_key)
+            app = GithubIntegration(auth=auth)
+            installation = app.get_installations()[0]
+            self.gh = installation.get_github_for_installation()
+        elif self.gh_token:
+            logging.debug("Logging in as user with PAT")
+            self.gh = Github(auth=Auth.Token(self.gh_token))
+            logging.debug("Logged in as %s", self.gh.get_user().login)
+        else:
+            logging.error("No GitHub token or App ID+private key provided")
+            sys.exit(1)
+
         self.org = self.gh.get_organization(orgname)
         logging.debug("Gathered data from organization '%s' (%s)", self.org.login, self.org.name)
 
     def ratelimit(self):
-        """Get current rate limit"""
+        """Print current rate limit"""
         core = self.gh.get_rate_limit().core
-        logging.debug(
+        logging.info(
             "Current rate limit: %s/%s (reset: %s)", core.remaining, core.limit, core.reset
         )
 
@@ -917,7 +946,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         permissions using the GraphQL API"""
         # TODO: Consider doing this for all repositories at once, but calculate
         # costs beforehand
-        query = """
+        graphql_query = """
             query($owner: String!, $name: String!, $cursor: String) {
                 repository(owner: $owner, name: $name) {
                     collaborators(first: 100, after: $cursor) {
@@ -944,7 +973,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
         while has_next_page:
             logging.debug("Requesting collaborators for %s", repo.name)
-            result = run_graphql_query(query, variables, self.gh_token)
+            result = run_graphql_query(graphql_query, variables, self.gh_token)
             try:
                 collaborators.extend(result["data"]["repository"]["collaborators"]["edges"])
                 has_next_page = result["data"]["repository"]["collaborators"]["pageInfo"][

@@ -13,20 +13,15 @@ import sys
 import requests
 
 
-def get_github_token(token: str = "") -> str:
-    """Get the GitHub token from config or environment, while environment overrides"""
-    if "GITHUB_TOKEN" in os.environ and os.environ["GITHUB_TOKEN"]:
-        logging.debug("GitHub Token taken from environment variable GITHUB_TOKEN")
-        token = os.environ["GITHUB_TOKEN"]
-    elif token:
-        logging.debug("GitHub Token taken from app configuration file")
-    else:
-        sys.exit(
-            "No token set for GitHub authentication! Set it in config/app_config.yaml "
-            "or via environment variable GITHUB_TOKEN"
-        )
+def get_github_secrets_from_env(env_variable: str, secret: str | int) -> str:
+    """Get GitHub secrets from config or environment, while environment overrides"""
+    if env_variable in os.environ and os.environ[env_variable]:
+        logging.debug("GitHub secret taken from environment variable %s", env_variable)
+        secret = os.environ[env_variable]
+    elif secret:
+        logging.debug("GitHub secret taken from app configuration file")
 
-    return token
+    return str(secret)
 
 
 # Function to execute GraphQL query
@@ -51,10 +46,12 @@ def run_graphql_query(query, variables, token):
         return json_return
 
     # Debug information in case of errors
-    print(
-        f"Query failed with HTTP error code '{request.status_code}' when running "
-        f"this query: {query}\n"
-        f"Return: {json_return}\n"
-        f"Headers: {request.headers}"
+    logging.error(
+        "Query failed with HTTP error code '%s' when running this query: %s\n"
+        "Return: %s\nHeaders: %s",
+        request.status_code,
+        query,
+        json_return,
+        request.headers,
     )
     sys.exit(1)

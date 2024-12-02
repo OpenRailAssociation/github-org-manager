@@ -54,6 +54,20 @@ Inside [`config/example`](./config/example), you can find an example configurati
 
 You may also be interested in the [live configuration of the OpenRail Association's organization](https://github.com/OpenRailAssociation/openrail-org-config).
 
+### Authentication via token or app
+
+As this tool issues many API requests (both on REST and GraphQL API), authentication is highly recommended. This is supported via personal access tokens of a user (PAT) or a GitHub App which you can setup yourself.
+
+Access tokens and apps need the following permissions:
+* Repository permissions
+  * Administration: read and write
+  * Metadata: read
+* Organization permissions:
+  * Administration: read and write
+  * Members: read and write
+
+You can set the required secrets in `config/app.yaml` or via environment variables (`GITHUB_TOKEN` or `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`).
+
 ## Run the program
 
 You can execute the program using the command `gh-org-mgr`. `gh-org-mgr --help` shows all available arguments and options.

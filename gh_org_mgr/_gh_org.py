@@ -115,7 +115,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             half2 = len(string) - half1
             return string[:half1] + "*" * (half2)
 
-        sensible_keys = ["gh_token"]
+        sensible_keys = ["gh_token", "gh_app_private_key"]
         for key in sensible_keys:
             if value := dictionary.get(key, ""):
                 dictionary[key] = censor_half_string(value)

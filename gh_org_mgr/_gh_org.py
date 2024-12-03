@@ -954,11 +954,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         graphql_query = """
             query($owner: String!, $cursor: String) {
                 organization(login: $owner) {
-                    repositories(first: 5, after: $cursor) {
+                    repositories(first: 100, after: $cursor) {
                         edges {
                             node {
                                 name
-                                collaborators(first: 20) {
+                                collaborators(first: 100) {
                                     edges {
                                         node {
                                             login
@@ -1107,9 +1107,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
                 # fill in collaborators of repo
                 try:
-                    self.graphql_repos_collaborators[repo_name].extend(
-                        repo_edges["node"]["collaborators"]["edges"]
-                    )
+                    repo_collaborators = repo_edges["node"]["collaborators"]["edges"]
+                    self.graphql_repos_collaborators[repo_name] = repo_collaborators
                 except (TypeError, KeyError):
                     logging.debug("Repo %s does not seem to have any collaborators", repo_name)
 
@@ -1137,9 +1136,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
             # fill in collaborators of repo
             try:
-                self.graphql_repos_collaborators[single_repo_name].extend(
-                    graphql_response["data"]["repository"]["collaborators"]["edges"]
-                )
+                repo_collaborators = graphql_response["data"]["repository"]["collaborators"][
+                    "edges"
+                ]
+                self.graphql_repos_collaborators[single_repo_name].extend(repo_collaborators)
             except (TypeError, KeyError):
                 logging.debug("Repo %s does not seem to have any collaborators", single_repo_name)
 

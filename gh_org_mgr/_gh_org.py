@@ -77,11 +77,15 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
         # Decide how to login. If app set, prefer this
         if self.gh_app_id and self.gh_app_private_key:
-            logging.debug("Logged in via app %s", self.gh_app_id)
+            logging.debug("Logging in via app %s", self.gh_app_id)
             auth = Auth.AppAuth(app_id=self.gh_app_id, private_key=self.gh_app_private_key)
             app = GithubIntegration(auth=auth)
-            installation = app.get_installations()[0]
+            installation = app.get_org_installation(org=orgname)
             self.gh = installation.get_github_for_installation()
+            logging.debug("Logged in via app installation %s", installation.id)
+
+            logging.debug("Getting access token for installation %s", installation.id)
+            self.gh_token = app.get_access_token(installation_id=installation.id).token
         elif self.gh_token:
             logging.debug("Logging in as user with PAT")
             self.gh = Github(auth=Auth.Token(self.gh_token))
@@ -90,6 +94,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             logging.error("No GitHub token or App ID+private key provided")
             sys.exit(1)
 
+        logging.debug("Gathering data from organization '%s'", orgname)
         self.org = self.gh.get_organization(orgname)
         logging.debug("Gathered data from organization '%s' (%s)", self.org.login, self.org.name)
 

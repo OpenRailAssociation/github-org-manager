@@ -983,50 +983,20 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         # Initial query parameters
         variables = {"owner": self.org.login, "cursor": None}
 
+        # dicts in which we store the collaborators of each repo, and the repos
+        # for which there are more than 100 collaborators
         repo_collaborators: dict[str, dict] = {}
-        missing_data_for_repos = {}
-        more_repos = True
+        missing_data_for_repos: dict[str, str] = {}
 
+        more_repos = True
         while more_repos:
             logging.debug("Requesting collaborators for %s", self.org.login)
             result = run_graphql_query(graphql_query, variables, self.gh_token)
-            try:
-                for repo in result["data"]["organization"]["repositories"]["edges"]:
-                    try:
-                        repo_name = repo["node"]["name"]
-                        logging.debug(
-                            "Extracting collaborators for %s from GraphQL response", repo_name
-                        )
-                    except KeyError:
-                        logging.error(
-                            "Did not find a repo name in the GraphQL response which "
-                            "seems to hint to a bug: %s",
-                            repo,
-                        )
-                        sys.exit(1)
-
-                    # fill in collaborators of repo
-                    collaborators = repo["node"]["collaborators"]["edges"]
-                    repo_collaborators[repo_name] = collaborators
-
-                    # Find out if there are more than 100 collaborators in the
-                    # GraphQL response for this repo
-                    if repo["node"]["collaborators"]["pageInfo"]["hasNextPage"]:
-                        missing_data_for_repos[repo_name] = repo["node"]["collaborators"][
-                            "pageInfo"
-                        ]["endCursor"]
-
-                # Find out if there are more than 100 repos in the GraphQL
-                # response. If so, get cursor
-                more_repos = result["data"]["organization"]["repositories"]["pageInfo"][
-                    "hasNextPage"
-                ]
-                variables["cursor"] = result["data"]["organization"]["repositories"]["pageInfo"][
-                    "endCursor"
-                ]
-            except (TypeError, KeyError):
-                logging.debug("Repo %s does not seem to have any collaborators", repo_name)
-                continue
+            self._process_graphql_response(result, repo_collaborators, missing_data_for_repos)
+            more_repos = result["data"]["organization"]["repositories"]["pageInfo"]["hasNextPage"]
+            variables["cursor"] = result["data"]["organization"]["repositories"]["pageInfo"][
+                "endCursor"
+            ]
 
         if missing_data_for_repos:
             logging.warning(
@@ -1035,8 +1005,41 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             )
             # TODO: Need to make individual graphql queries for these repos
 
-        # Iterate repos, and fill self.current_repos_collaborators[repo] with
-        # collaborators as fetched from GraphQL and put into repo_collaborators
+        self._populate_current_repos_collaborators(repo_collaborators)
+
+    def _process_graphql_response(
+        self, result, repo_collaborators: dict[str, dict], missing_data_for_repos: dict[str, str]
+    ):
+        """Process the GraphQL response and extract collaborators"""
+        try:
+            for repo_edges in result["data"]["organization"]["repositories"]["edges"]:
+                try:
+                    repo_name: str = repo_edges["node"]["name"]
+                    logging.debug(
+                        "Extracting collaborators for %s from GraphQL response", repo_name
+                    )
+                except KeyError:
+                    logging.error(
+                        "Did not find a repo name in the GraphQL response which "
+                        "seems to hint to a bug: %s",
+                        repo_edges,
+                    )
+                    sys.exit(1)
+
+                # fill in collaborators of repo
+                repo_collaborators[repo_name] = repo_edges["node"]["collaborators"]["edges"]
+
+                # Find out if there are more than 100 collaborators in the
+                # GraphQL response for this repo
+                if repo_edges["node"]["collaborators"]["pageInfo"]["hasNextPage"]:
+                    missing_data_for_repos[repo_name] = repo_edges["node"]["collaborators"][
+                        "pageInfo"
+                    ]["endCursor"]
+        except (TypeError, KeyError):
+            logging.debug("Repo does not seem to have any collaborators")
+
+    def _populate_current_repos_collaborators(self, repo_collaborators: dict[str, dict]):
+        """Populate self.current_repos_collaborators with data from repo_collaborators"""
         for repo, collaborators in self.current_repos_collaborators.items():
             if repo.name in repo_collaborators:
                 # Extract each collaborator from the GraphQL response for this repo

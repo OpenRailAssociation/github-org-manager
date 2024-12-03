@@ -708,7 +708,25 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 continue
 
             # Convert team name to Team object
-            team = self.org.get_team_by_slug(self._sluggify_teamname(team_name))
+            try:
+                team = self.org.get_team_by_slug(self._sluggify_teamname(team_name))
+            # Team not found, probably because a new team should be created, but it's a dry-run
+            except UnknownObjectException:
+                logging.debug(
+                    "Team %s not found, probably because it should be created but it's a dry-run",
+                    team_name,
+                )
+                # Initialise a new Team() object with the name, manually
+                team = Team(
+                    requester=None,  # type: ignore
+                    headers={},  # No headers required
+                    attributes={
+                        "id": 0,
+                        "name": team_name,
+                        "slug": self._sluggify_teamname(team_name),
+                    },
+                    completed=True,  # Mark as fully initialized
+                )
 
             # Get configured repo permissions
             for repo, perm in team_attrs.get("repos", {}).items():

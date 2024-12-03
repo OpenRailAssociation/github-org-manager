@@ -946,59 +946,107 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
         return permission
 
-    def _fetch_collaborators_of_repo(self, repo: Repository):
-        """Get all collaborators (individuals) of a GitHub repo with their
-        permissions using the GraphQL API"""
-        # TODO: Consider doing this for all repositories at once, but calculate
-        # costs beforehand
+    def _fetch_collaborators_of_all_organization_repos(self):
+        """Get all collaborators (individuals) of all repos of a GitHub
+        organization with their permissions using the GraphQL API"""
+
         graphql_query = """
-            query($owner: String!, $name: String!, $cursor: String) {
-                repository(owner: $owner, name: $name) {
-                    collaborators(first: 100, after: $cursor) {
+            query($owner: String!, $cursor: String) {
+                organization(login: $owner) {
+                    repositories(first: 100, after: $cursor) {
                         edges {
                             node {
-                                login
+                                name
+                                collaborators(first: 100) {
+                                    edges {
+                                        node {
+                                            login
+                                        }
+                                        permission
+                                    }
+                                    pageInfo {
+                                        endCursor
+                                        hasNextPage
+                                    }
+                                }
                             }
-                            permission
                         }
                         pageInfo {
                             endCursor
                             hasNextPage
                         }
+                    }
                 }
             }
-        }
         """
 
         # Initial query parameters
-        variables = {"owner": self.org.login, "name": repo.name, "cursor": None}
+        variables = {"owner": self.org.login, "cursor": None}
 
-        collaborators = []
-        has_next_page = True
+        repo_collaborators: dict[str, dict] = {}
+        missing_data_for_repos = {}
+        more_repos = True
 
-        while has_next_page:
-            logging.debug("Requesting collaborators for %s", repo.name)
+        while more_repos:
+            logging.debug("Requesting collaborators for %s", self.org.login)
             result = run_graphql_query(graphql_query, variables, self.gh_token)
             try:
-                collaborators.extend(result["data"]["repository"]["collaborators"]["edges"])
-                has_next_page = result["data"]["repository"]["collaborators"]["pageInfo"][
+                for repo in result["data"]["organization"]["repositories"]["edges"]:
+                    try:
+                        repo_name = repo["node"]["name"]
+                        logging.debug(
+                            "Extracting collaborators for %s from GraphQL response", repo_name
+                        )
+                    except KeyError:
+                        logging.error(
+                            "Did not find a repo name in the GraphQL response which "
+                            "seems to hint to a bug: %s",
+                            repo,
+                        )
+                        sys.exit(1)
+
+                    # fill in collaborators of repo
+                    collaborators = repo["node"]["collaborators"]["edges"]
+                    repo_collaborators[repo_name] = collaborators
+
+                    # Find out if there are more than 100 collaborators in the
+                    # GraphQL response for this repo
+                    if repo["node"]["collaborators"]["pageInfo"]["hasNextPage"]:
+                        missing_data_for_repos[repo_name] = repo["node"]["collaborators"][
+                            "pageInfo"
+                        ]["endCursor"]
+
+                # Find out if there are more than 100 repos in the GraphQL
+                # response. If so, get cursor
+                more_repos = result["data"]["organization"]["repositories"]["pageInfo"][
                     "hasNextPage"
                 ]
-                variables["cursor"] = result["data"]["repository"]["collaborators"]["pageInfo"][
+                variables["cursor"] = result["data"]["organization"]["repositories"]["pageInfo"][
                     "endCursor"
                 ]
             except (TypeError, KeyError):
-                logging.debug("Repo %s does not seem to have any collaborators", repo.name)
+                logging.debug("Repo %s does not seem to have any collaborators", repo_name)
                 continue
 
-        # Extract relevant data
-        for collaborator in collaborators:
-            login: str = collaborator["node"]["login"]
-            # Skip entry if collaborator is org owner, which is "admin" anyway
-            if login.lower() in [user.login.lower() for user in self.current_org_owners]:
-                continue
-            permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
-            self.current_repos_collaborators[repo][login.lower()] = permission
+        if missing_data_for_repos:
+            logging.warning(
+                "Not all collaborators of all repos have been fetched. Missing data: %s",
+                missing_data_for_repos,
+            )
+            # TODO: Need to make individual graphql queries for these repos
+
+        # Iterate repos, and fill self.current_repos_collaborators[repo] with
+        # collaborators as fetched from GraphQL and put into repo_collaborators
+        for repo, collaborators in self.current_repos_collaborators.items():
+            if repo.name in repo_collaborators:
+                # Extract each collaborator from the GraphQL response for this repo
+                for collaborator in repo_collaborators[repo.name]:
+                    login: str = collaborator["node"]["login"]
+                    # Skip entry if collaborator is org owner, which is "admin" anyway
+                    if login.lower() in [user.login.lower() for user in self.current_org_owners]:
+                        continue
+                    permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
+                    collaborators[login.lower()] = permission
 
     def _get_current_repos_and_user_perms(self):
         """Get all repos, their current collaborators and their permissions"""
@@ -1006,9 +1054,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         for repo in self.current_repos_teams:
             self.current_repos_collaborators[repo] = {}
 
-        for repo in self.current_repos_collaborators:
-            # Get users for this repo
-            self._fetch_collaborators_of_repo(repo)
+        self._fetch_collaborators_of_all_organization_repos()
 
     def _get_default_repository_permission(self):
         """Get the default repository permission for all users. Convert to

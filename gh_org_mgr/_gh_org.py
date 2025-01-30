@@ -15,10 +15,12 @@ from github import (
     GithubIntegration,
     UnknownObjectException,
 )
+from github.GithubException import BadCredentialsException
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository
 from github.Team import Team
+from jwt.exceptions import InvalidKeyError
 
 from ._gh_api import get_github_secrets_from_env, run_graphql_query
 
@@ -65,6 +67,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         # supported, or multiple spaces etc.
         return team.replace(" ", "-")
 
+    # amazonq-ignore-next-line
     def login(
         self, orgname: str, token: str = "", app_id: str | int = "", app_private_key: str = ""
     ) -> None:
@@ -81,7 +84,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             logging.debug("Logging in via app %s", self.gh_app_id)
             auth = Auth.AppAuth(app_id=self.gh_app_id, private_key=self.gh_app_private_key)
             app = GithubIntegration(auth=auth)
-            installation = app.get_org_installation(org=orgname)
+            try:
+                installation = app.get_org_installation(org=orgname)
+            except InvalidKeyError:
+                logging.critical("Invalid private key provided for GitHub App")
+                sys.exit(1)
             self.gh = installation.get_github_for_installation()
             logging.debug("Logged in via app installation %s", installation.id)
 
@@ -90,7 +97,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         elif self.gh_token:
             logging.debug("Logging in as user with PAT")
             self.gh = Github(auth=Auth.Token(self.gh_token))
-            logging.debug("Logged in as %s", self.gh.get_user().login)
+            try:
+                logging.debug("Logged in as %s", self.gh.get_user().login)
+            except BadCredentialsException:
+                logging.critical("Invalid GitHub token provided")
+                sys.exit(1)
         else:
             logging.error("No GitHub token or App ID+private key provided")
             sys.exit(1)

@@ -33,7 +33,7 @@ requests = "^2.32.3"
 python-slugify = "^8.0.4"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
+black = "^25.1.0"
 isort = ">=5.13.2,<7.0.0"
 mypy = "^1.9.0"
 pylint = "^3.1.0"

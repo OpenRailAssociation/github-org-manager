@@ -550,6 +550,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         open_invitations = [user.login.lower() for user in self.org.invitations()]
 
         for team, team_attrs in self.current_teams.items():
+            # Ignore any team not being configured locally, will be handled later
+            if team.name not in self.configured_teams:
+                continue
+
             # Update current team members with dict[NamedUser, str (role)]
             team_attrs["members"] = self._get_current_team_members(team)
 
@@ -558,15 +562,6 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             current_team_members = {
                 user.login.lower(): role for user, role in team_attrs["members"].items()
             }
-
-            # Handle the team not being configured locally
-            if team.name not in self.configured_teams:
-                logging.warning(
-                    "Team '%s' does not seem to be configured locally. "
-                    "Taking no action about this team at all",
-                    team.name,
-                )
-                continue
 
             # Get configuration from current team
             if team_configuration := self.configured_teams.get(team.name):
@@ -665,6 +660,30 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             gh_user.login,
                             team.name,
                         )
+
+    def get_unconfigured_teams(
+        self, dry: bool = False, delete_unconfigured_teams: bool = False
+    ) -> None:
+        """Get all teams that are not configured locally and optionally remove them"""
+        # Get all teams that are not configured locally
+        unconfigured_teams: list[Team] = []
+        for team in self.current_teams:
+            if team.name not in self.configured_teams:
+                unconfigured_teams.append(team)
+
+        if unconfigured_teams:
+            if delete_unconfigured_teams:
+                for team in unconfigured_teams:
+                    logging.info("Deleting team '%s' as it is not configured locally", team.name)
+                    if not dry:
+                        team.delete()
+            else:
+                unconfigured_teams_str = [team.name for team in unconfigured_teams]
+                logging.warning(
+                    "The following teams of your GitHub organisation are not "
+                    "configured locally: %s. Taking no action about these teams.",
+                    ", ".join(unconfigured_teams_str),
+                )
 
     def get_members_without_team(
         self, dry: bool = False, remove_members_without_team: bool = False

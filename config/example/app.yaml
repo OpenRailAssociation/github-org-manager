@@ -42,3 +42,6 @@ github_app_private_key: |
 # Remove members from organisation who are not member of any team or
 # organisation owners. Default: false
 remove_members_without_team: false
+
+# Delete teams that are not configured. Default: false
+delete_unconfigured_teams: false

@@ -129,6 +129,11 @@ def main():
         org.sync_current_teams_settings(dry=args.dry)
         # Synchronise the team memberships
         org.sync_teams_members(dry=args.dry)
+        # Report and act on teams that are not configured locally
+        org.get_unconfigured_teams(
+            dry=args.dry,
+            delete_unconfigured_teams=cfg_app.get("delete_unconfigured_teams", False),
+        )
         # Report and act on organisation members that do not belong to any team
         org.get_members_without_team(
             dry=args.dry,

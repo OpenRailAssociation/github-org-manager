@@ -129,8 +129,16 @@ def main():
         org.sync_current_teams_settings(dry=args.dry)
         # Synchronise the team memberships
         org.sync_teams_members(dry=args.dry)
-        # Report about organisation members that do not belong to any team
-        org.get_members_without_team()
+        # Report and act on teams that are not configured locally
+        org.get_unconfigured_teams(
+            dry=args.dry,
+            delete_unconfigured_teams=cfg_app.get("delete_unconfigured_teams", False),
+        )
+        # Report and act on organisation members that do not belong to any team
+        org.get_members_without_team(
+            dry=args.dry,
+            remove_members_without_team=cfg_app.get("remove_members_without_team", False),
+        )
         # Synchronise the permissions of teams for all repositories
         org.sync_repo_permissions(dry=args.dry, ignore_archived=args.ignore_archived)
         # Remove individual collaborator permissions if they are higher than the one

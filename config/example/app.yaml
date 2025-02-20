@@ -38,3 +38,10 @@ github_app_private_key: |
   D9zgrlJ8D4bxPrwDrCuXHY7s/1/uCX3K+mS7CWpybOcJY4XzsNznOYcMQzw22fxl
   u1ioG/s3Ahhd778VIjj5d32Xbjj8vbSFj8vJe5bBNblYbelWfETg
   -----END RSA PRIVATE KEY-----
+
+# Remove members from organisation who are not member of any team or
+# organisation owners. Default: false
+remove_members_without_team: false
+
+# Delete teams that are not configured. Default: false
+delete_unconfigured_teams: false

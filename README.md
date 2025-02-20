@@ -48,7 +48,7 @@ Afterwards, the tool is executable with the command `gh-org-mgr`. The `--help` f
 
 Inside [`config/example`](./config/example), you can find an example configuration that shall help you to understand the structure:
 
-* `app.yaml`: Configuration necessary to run this tool
+* `app.yaml`: Configuration necessary to run this tool and controlling some behaviour
 * `org.yaml`: Organization-wide configuration
 * `teams/*.yaml`: Configuration concerning the teams of your organization.
 

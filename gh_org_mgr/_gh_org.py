@@ -666,8 +666,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             team.name,
                         )
 
-    def get_members_without_team(self) -> None:
-        """Get all organisation members without any team membership"""
+    def get_members_without_team(
+        self, dry: bool = False, remove_members_without_team: bool = False
+    ) -> None:
+        """Get all organisation members without any team membership, and
+        optionally remove them"""
         # Combine org owners and org members
         all_org_members = set(self.org_members + self.current_org_owners)
 
@@ -685,11 +688,21 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         members_without_team = all_org_members.difference(all_team_members)
 
         if members_without_team:
-            members_without_team_str = [user.login for user in members_without_team]
-            logging.warning(
-                "The following members of your GitHub organisation are not member of any team: %s",
-                ", ".join(members_without_team_str),
-            )
+            if remove_members_without_team:
+                for user in members_without_team:
+                    logging.info(
+                        "Removing user '%s' from organisation as they are not member of any team",
+                        user.login,
+                    )
+                    if not dry:
+                        self.org.remove_from_membership(user)
+            else:
+                members_without_team_str = [user.login for user in members_without_team]
+                logging.warning(
+                    "The following members of your GitHub organisation are not "
+                    "member of any team: %s",
+                    ", ".join(members_without_team_str),
+                )
 
     # --------------------------------------------------------------------------
     # Repos

@@ -676,8 +676,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         for _, team_attrs in self.current_teams.items():
             for member in team_attrs.get("members", {}):
                 all_team_members_lst.append(member)
-        # Also add users that have just been added to a team, and unify them
-        all_team_members: set[NamedUser] = set(all_team_members_lst + self.newly_added_users)
+        # Also add org owners and users that have just been added to a team, and unify them
+        all_team_members: set[NamedUser] = set(
+            all_team_members_lst + self.newly_added_users + self.current_org_owners
+        )
 
         # Find members that are in org_members but not team_members
         members_without_team = all_org_members.difference(all_team_members)

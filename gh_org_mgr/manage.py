@@ -40,6 +40,13 @@ parser_sync.add_argument(
     required=True,
     help="Path to the directory in which the configuration of an GitHub organisation is located",
 )
+parser_sync.add_argument(
+    "-o",
+    "--output",
+    help="Output format for report",
+    choices=["json", "text"],
+    default="text",
+)
 parser_sync.add_argument("--dry", action="store_true", help="Do not make any changes at GitHub")
 parser_sync.add_argument(
     "-A",
@@ -149,7 +156,9 @@ def main():
         logging.debug("Final dataclass:\n%s", org.pretty_print_dataclass())
         org.ratelimit()
 
-        print(org.stats)
+        org.stats.print_changes(
+            orgname=cfg_org.get("org_name", ""), output=args.output, dry=args.dry
+        )
 
     # Setup Team command
     elif args.command == "setup-team":

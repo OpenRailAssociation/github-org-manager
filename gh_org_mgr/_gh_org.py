@@ -27,7 +27,7 @@ from ._gh_api import get_github_secrets_from_env, run_graphql_query
 from ._helpers import (
     compare_two_dicts,
     compare_two_lists,
-    pretty_print_dict,
+    dict_to_pretty_string,
     sluggify_teamname,
 )
 from ._stats import OrgChanges
@@ -122,7 +122,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
     def pretty_print_dataclass(self) -> str:
         """Convert this dataclass to a pretty-printed output"""
-        return pretty_print_dict(asdict(self), sensible_keys=["gh_token", "gh_app_private_key"])
+        return dict_to_pretty_string(asdict(self), sensible_keys=["gh_token", "gh_app_private_key"])
 
     def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
         """Turn a username into a proper GitHub user object"""
@@ -418,7 +418,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         logging.critical(
                             "Team '%s' settings could not be edited. Error: \n%s",
                             team.name,
-                            pretty_print_dict(exc.data),
+                            dict_to_pretty_string(exc.data),
                         )
                         sys.exit(1)
             else:

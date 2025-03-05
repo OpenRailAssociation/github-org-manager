@@ -19,6 +19,7 @@ from github.GithubException import BadCredentialsException
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository
+from github.Requester import Requester
 from github.Team import Team
 from jwt.exceptions import InvalidKeyError
 
@@ -763,7 +764,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 )
                 # Initialise a new Team() object with the name, manually
                 team = Team(
-                    requester=None,  # type: ignore
+                    requester=Requester(
+                        auth=None,
+                        base_url="https://api.github.com",
+                        timeout=10,
+                        user_agent="",
+                        per_page=100,
+                        verify=True,
+                        retry=3,
+                        pool_size=200,
+                    ),
                     headers={},  # No headers required
                     attributes={
                         "id": 0,

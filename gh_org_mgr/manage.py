@@ -149,6 +149,8 @@ def main():
         logging.debug("Final dataclass:\n%s", org.pretty_print_dataclass())
         org.ratelimit()
 
+        print(org.stats)
+
     # Setup Team command
     elif args.command == "setup-team":
         setup_team(team_name=args.name, config_path=args.config, file_path=args.file)

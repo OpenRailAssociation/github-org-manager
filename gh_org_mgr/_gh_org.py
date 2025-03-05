@@ -24,6 +24,7 @@ from github.Team import Team
 from jwt.exceptions import InvalidKeyError
 
 from ._gh_api import get_github_secrets_from_env, run_graphql_query
+from ._stats import OrgChanges
 
 
 @dataclass
@@ -48,6 +49,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository] = field(default_factory=list)
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
+    stats: OrgChanges = field(default_factory=OrgChanges)
 
     # Re-usable Constants
     TEAM_CONFIG_FIELDS: dict[str, dict[str, str | None]] = field(  # pylint: disable=invalid-name
@@ -315,6 +317,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         for user in owners_add:
             if gh_user := self._resolve_gh_username(user, "<org owners>"):
                 logging.info("Adding user '%s' as organization owner", gh_user.login)
+                self.stats.add_owner(gh_user.login)
                 if not dry:
                     self.org.add_to_members(gh_user, "admin")
 
@@ -326,6 +329,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     "Will make them a normal member",
                     gh_user.login,
                 )
+                self.stats.degrade_owner(gh_user.login)
                 # Handle authenticated user being the same as the one you want to degrade
                 if self._is_user_authenticated_user(gh_user):
                     logging.warning(
@@ -374,6 +378,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     parent_id = self.org.get_team_by_slug(self._sluggify_teamname(parent)).id
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
+                    self.stats.create_team(team)
                     # NOTE: We do not specify any team settings (description etc)
                     # here, this will happen later
                     if not dry:
@@ -386,6 +391,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
                 else:
                     logging.info("Creating team '%s' without parent", team)
+                    self.stats.create_team(team)
                     if not dry:
                         self.org.create_team(
                             team,
@@ -479,9 +485,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     team.name,
                 )
                 for setting, diff in differences.items():
-                    logging.info(
-                        "Setting '%s': '%s' --> '%s'", setting, diff["dict2"], diff["dict1"]
-                    )
+                    change_str = f"Setting '{setting}': '{diff['dict2']}' --> '{diff['dict1']}'"
+                    logging.info(change_str)
+                    self.stats.edit_team_config(team.name, new_config=change_str)
+
                 # Execute team setting changes
                 if not dry:
                     try:
@@ -612,6 +619,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             team.name,
                             config_role,
                         )
+                        self.stats.pending_team_member(team=team.name, user=gh_user.login)
                         continue
 
                     logging.info(
@@ -620,6 +628,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         team.name,
                         config_role,
                     )
+                    self.stats.add_team_member(team=team.name, user=gh_user.login)
                     if not dry:
                         self._add_or_update_user_in_team(team=team, user=gh_user, role=config_role)
 
@@ -634,6 +643,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         team.name,
                         config_role,
                     )
+                    self.stats.change_team_member_role(team=team.name, user=gh_user.login)
                     if not dry:
                         self._add_or_update_user_in_team(team=team, user=gh_user, role=config_role)
 
@@ -652,6 +662,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             gh_user.login,
                             team.name,
                         )
+                        self.stats.remove_team_member(team=team.name, user=gh_user.login)
                         if not dry:
                             team.remove_membership(gh_user)
                     else:
@@ -676,6 +687,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             if delete_unconfigured_teams:
                 for team in unconfigured_teams:
                     logging.info("Deleting team '%s' as it is not configured locally", team.name)
+                    self.stats.delete_team(team=team.name, deleted=True)
                     if not dry:
                         team.delete()
             else:
@@ -685,6 +697,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     "configured locally: %s. Taking no action about these teams.",
                     ", ".join(unconfigured_teams_str),
                 )
+                for team in unconfigured_teams:
+                    self.stats.delete_team(team=team.name, deleted=False)
 
     def get_members_without_team(
         self, dry: bool = False, remove_members_without_team: bool = False
@@ -714,6 +728,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         "Removing user '%s' from organisation as they are not member of any team",
                         user.login,
                     )
+                    self.stats.remove_member_without_team(user=user.login, removed=True)
                     if not dry:
                         self.org.remove_from_membership(user)
             else:
@@ -723,6 +738,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     "member of any team: %s",
                     ", ".join(members_without_team_str),
                 )
+                for user in members_without_team:
+                    self.stats.remove_member_without_team(user=user.login, removed=False)
 
     # --------------------------------------------------------------------------
     # Repos
@@ -850,6 +867,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     team.name,
                     perm,
                 )
+                self.stats.change_repo_team_permissions(repo=repo.name, team=team.name, perm=perm)
                 if not dry:
                     # Update permissions or newly add a team to a repo
                     team.update_team_repository(repo, perm)
@@ -875,6 +893,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     self._document_unconfigured_team_repo_permissions(
                         team=team, team_permission=teams[team], repo_name=repo.name
                     )
+                    # Collect this status in the stats
+                    self.stats.document_unconfigured_team_permissions(
+                        team=team.name, repo=repo.name, perm=teams[team]
+                    )
                     # Abort handling the repo sync as we don't touch unconfigured teams
                     continue
                 # Handle: Team is configured, but contains no config
@@ -893,6 +915,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 # Remove if any mismatch has been found
                 if remove:
                     logging.info("Removing team '%s' from repository '%s'", team.name, repo.name)
+                    self.stats.remove_team_from_repo(repo=repo.name, team=team.name)
                     if not dry:
                         team.remove_from_repos(repo)
 
@@ -1338,5 +1361,6 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     )
 
                     # Remove collaborator
+                    self.stats.remove_repo_collaborator(repo=repo.name, user=username)
                     if not dry:
                         repo.remove_from_collaborators(username)

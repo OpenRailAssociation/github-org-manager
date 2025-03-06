@@ -4,7 +4,38 @@
 
 """Helper functions"""
 
+import logging
+import sys
 from dataclasses import asdict
+
+
+def configure_logger(verbose: bool = False, debug: bool = False) -> logging.Logger:
+    """Set logging options"""
+    log = logging.getLogger()
+    logging.basicConfig(
+        encoding="utf-8",
+        format="[%(asctime)s] %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    if debug:
+        log.setLevel(logging.DEBUG)
+    elif verbose:
+        log.setLevel(logging.INFO)
+    else:
+        log.setLevel(logging.WARNING)
+
+    return log
+
+
+def log_progress(message: str) -> None:
+    """Log progress messages to stderr"""
+    # Clear line if no message is given
+    if not message:
+        sys.stderr.write("\r\033[K")
+        sys.stderr.flush()
+    else:
+        sys.stderr.write(f"\r\033[K⏳ {message}")
+        sys.stderr.flush()
 
 
 def sluggify_teamname(team: str) -> str:

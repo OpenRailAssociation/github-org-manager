@@ -111,14 +111,14 @@ files = [
 
 [[package]]
 name = "bump-my-version"
-version = "1.0.0"
+version = "1.1.1"
 description = "Version bump your Python project"
 optional = false
 python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "bump_my_version-1.0.0-py3-none-any.whl", hash = "sha256:f90324a8cde98c5ff09632eada4ba847096817463a37b6fa9b8899ec4192b45d"},
-    {file = "bump_my_version-1.0.0.tar.gz", hash = "sha256:cbedf33d2e18d18ee3ad99f73309a75d85707b7a3d42ca96160b5b5b0a2f6104"},
+    {file = "bump_my_version-1.1.1-py3-none-any.whl", hash = "sha256:6bd78e20421f6335c1a49d7e85a2f16ae8966897d0a2dd130a0e8b6b55954686"},
+    {file = "bump_my_version-1.1.1.tar.gz", hash = "sha256:2f590e0eabe894196289c296c52170559c09876454514ae8fce5db75bd47289e"},
 ]
 
 [package.dependencies]

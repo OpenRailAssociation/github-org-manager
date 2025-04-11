@@ -38,7 +38,7 @@ jobs:
 
   # Test building the package and installing it via pip3
   test-build-install:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -58,7 +58,7 @@ jobs:
 
   # Formatting
   pylint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/poetrybuild
@@ -66,7 +66,7 @@ jobs:
         run: poetry run pylint --disable=fixme gh_org_mgr/
 
   formatting:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/poetrybuild
@@ -76,7 +76,7 @@ jobs:
           poetry run black --check .
 
   mypy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/poetrybuild

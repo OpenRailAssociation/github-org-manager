@@ -1,0 +1,18 @@
+// SPDX-FileCopyrightText: 2025 DB Systel GmbH
+// SPDX-License-Identifier: CC0-1.0
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:enableMajor",
+    ":automergeMinor"
+  ],
+  // Add these labels to all opened PRs
+  "labels": [
+    "Renovate"
+  ],
+  // Enable Semantic Commit prefixes for commits and PR titles
+  "semanticCommits": "enabled",
+  // Let Renovate close the Dependency Dashboard issue if there are no more updates
+  "dependencyDashboardAutoclose": true
+}

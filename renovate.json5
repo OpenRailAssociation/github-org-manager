@@ -13,6 +13,15 @@
   ],
   // Enable Semantic Commit prefixes for commits and PR titles
   "semanticCommits": "enabled",
-  // Let Renovate close the Dependency Dashboard issue if there are no more updates
-  "dependencyDashboardAutoclose": true
+  // Group dependency groups
+  "packageRules": [
+    {
+      "matchDepTypes": ["dev"],
+      "groupName": "dev dependencies group"
+    },
+    {
+      "managers": ["github-actions"],
+      "groupName": "GitHub actions group"
+    }
+  ]
 }

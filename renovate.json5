@@ -1,27 +1,6 @@
-// SPDX-FileCopyrightText: 2025 DB Systel GmbH
 // SPDX-License-Identifier: CC0-1.0
+// SPDX-FileCopyrightText: 2025 OpenRail Association AISBL
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "docker:enableMajor",
-    ":automergeMinor"
-  ],
-  // Add these labels to all opened PRs
-  "labels": [
-    "Renovate"
-  ],
-  // Enable Semantic Commit prefixes for commits and PR titles
-  "semanticCommits": "enabled",
-  // Group dependency groups
-  "packageRules": [
-    {
-      "matchDepTypes": ["dev"],
-      "groupName": "dev dependencies group"
-    },
-    {
-      "managers": ["github-actions"],
-      "groupName": "GitHub actions group"
-    }
-  ]
+  "extends": ["github>OpenRailAssociation/renovate-config"],
 }

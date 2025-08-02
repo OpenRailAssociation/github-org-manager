@@ -115,7 +115,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
     def ratelimit(self):
         """Print current rate limit"""
-        core = self.gh.get_rate_limit().core
+        core = self.gh.get_rate_limit().resources.core
         logging.info(
             "Current rate limit: %s/%s (reset: %s)", core.remaining, core.limit, core.reset
         )

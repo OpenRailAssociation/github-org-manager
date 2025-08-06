@@ -8,14 +8,12 @@ import logging
 import sys
 from dataclasses import asdict, dataclass, field
 
-from github import (
-    Auth,
-    Github,
+from github import Auth, Github, GithubIntegration
+from github.GithubException import (
+    BadCredentialsException,
     GithubException,
-    GithubIntegration,
     UnknownObjectException,
 )
-from github.GithubException import BadCredentialsException
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository

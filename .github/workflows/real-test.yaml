@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2025 DB Systel GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Test with real GitHub org
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_APP_ID: ${{ secrets.TEST_GITHUB_APP_ID }}
+      GITHUB_APP_PRIVATE_KEY: ${{ secrets.TEST_GITHUB_APP_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: ./.github/actions/poetrybuild
+      - name: Replace data in config files
+        run: |
+          sed -i "s/TEST_GITHUB_ORG/${{ secrets.TEST_GITHUB_ORG }}/g" tests/data/config/org_files/*.yaml
+          sed -i "s/TEST_USER/${{ secrets.TEST_USER }}/g" tests/data/config/org_files/*.yaml
+          sed -i "s/TEST_USER/${{ secrets.TEST_USER }}/g" tests/data/config/teams_files/*.yaml
+      - name: Prepare for first run
+        run: |
+          mkdir -p tests/data/config/teams
+          cp tests/data/config/teams_files/teams_changes.yaml tests/data/config/teams/teams.yaml
+          cp tests/data/config/org_files/org_changes.yaml tests/data/config/org.yaml
+      - name: Run 1 (changes) - dry run
+        run: poetry run gh-org-mgr sync -c tests/data/config/ --dry -vv
+      - name: Run 1 (changes) - prod run
+        run: poetry run gh-org-mgr sync -c tests/data/config/ -vv
+      - name: Prepare for second run, reverting to original state
+        run: |
+          cp tests/data/config/teams_files/teams_orig.yaml tests/data/config/teams/teams.yaml
+          cp tests/data/config/org_files/org_orig.yaml tests/data/config/org.yaml
+      - name: Run 2 (revert) - dry run
+        run: poetry run gh-org-mgr sync -c tests/data/config/ --dry -vv
+      - name: Run 2 (revert) - prod run
+        run: poetry run gh-org-mgr sync -c tests/data/config/ -vv

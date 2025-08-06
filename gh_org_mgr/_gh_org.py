@@ -294,7 +294,18 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         for team, attributes in self.configured_teams.items():
             if team not in existent_team_names:
                 if parent := attributes.get("parent"):  # type: ignore
-                    parent_id = self.org.get_team_by_slug(sluggify_teamname(parent)).id
+                    try:
+                        parent_id = self.org.get_team_by_slug(sluggify_teamname(parent)).id
+                    except UnknownObjectException:
+                        if dry:
+                            logging.debug(
+                                "For team %s, the configured parent team's ('%s') ID wasn't found, "
+                                "probably because it should be created but it's a dry-run. "
+                                "We set a default ID of 424242",
+                                team,
+                                parent,
+                            )
+                            parent_id = 424242
 
                     logging.info("Creating team '%s' with parent ID '%s'", team, parent_id)
                     self.stats.create_team(team)

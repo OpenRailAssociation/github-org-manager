@@ -52,6 +52,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     current_repos_collaborators: dict[Repository, dict[str, str]] = field(default_factory=dict)
     configured_repos_collaborators: dict[str, dict[str, str]] = field(default_factory=dict)
     archived_repos: list[Repository] = field(default_factory=list)
+    unconfigured_teams: list[Team] = field(default_factory=list)
     unconfigured_team_repo_permissions: dict[str, dict[str, str]] = field(default_factory=dict)
     stats: OrgChanges = field(default_factory=OrgChanges)
 
@@ -603,31 +604,38 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             team.name,
                         )
 
-    def get_unconfigured_teams(
+    def get_and_delete_unconfigured_teams(
         self, dry: bool = False, delete_unconfigured_teams: bool = False
     ) -> None:
         """Get all teams that are not configured locally and optionally remove them"""
         # Get all teams that are not configured locally
-        unconfigured_teams: list[Team] = []
         for team in self.current_teams:
             if team.name not in self.configured_teams:
-                unconfigured_teams.append(team)
+                self.unconfigured_teams.append(team)
 
-        if unconfigured_teams:
+        if self.unconfigured_teams:
             if delete_unconfigured_teams:
-                for team in unconfigured_teams:
+                for team in self.unconfigured_teams:
                     logging.info("Deleting team '%s' as it is not configured locally", team.name)
                     self.stats.delete_team(team=team.name, deleted=True)
                     if not dry:
-                        team.delete()
+                        try:
+                            team.delete()
+                        except UnknownObjectException as e:
+                            logging.info(
+                                "Team '%s' could not be deleted, probably because it was already "
+                                "deleted as part of a parent team. "
+                                "Error: %s",
+                                team.name,
+                                e,
+                            )
             else:
-                unconfigured_teams_str = [team.name for team in unconfigured_teams]
                 logging.warning(
                     "The following teams of your GitHub organisation are not "
                     "configured locally: %s. Taking no action about these teams.",
-                    ", ".join(unconfigured_teams_str),
+                    ", ".join([team.name for team in self.unconfigured_teams]),
                 )
-                for team in unconfigured_teams:
+                for team in self.unconfigured_teams:
                     self.stats.delete_team(team=team.name, deleted=False)
 
     def get_members_without_team(

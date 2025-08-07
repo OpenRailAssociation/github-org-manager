@@ -145,7 +145,7 @@ def main():
         org.sync_teams_members(dry=args.dry)
         # Report and act on teams that are not configured locally
         log_progress("Checking for unconfigured teams...")
-        org.get_unconfigured_teams(
+        org.get_and_delete_unconfigured_teams(
             dry=args.dry,
             delete_unconfigured_teams=cfg_app.get("delete_unconfigured_teams", False),
         )

@@ -83,8 +83,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
         # Decide how to login. If app set, prefer this
         if self.gh_app_id and self.gh_app_private_key:
-            logging.debug("Logging in via app %s", self.gh_app_id)
-            auth = Auth.AppAuth(app_id=self.gh_app_id, private_key=self.gh_app_private_key)
+            gh_app_id_sanitized = str(self.gh_app_id).strip("'").strip('"')
+            logging.debug("Logging in via app %s", gh_app_id_sanitized)
+            auth = Auth.AppAuth(app_id=gh_app_id_sanitized, private_key=self.gh_app_private_key)
             app = GithubIntegration(auth=auth)
             try:
                 installation = app.get_org_installation(org=orgname)

@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2024 DB Systel GmbH
+# SPDX-License-Identifier: CC0-1.0
+
+# ------------------------------------------------------------------------------
+# General configuration for this program
+# ------------------------------------------------------------------------------
+
+# github_token: ghp_test
+# github_app_id: 12345
+# github_app_private_key: |
+# ------BEGIN RSA PRIVATE KEY-----
+# ...
+# ------END RSA PRIVATE KEY-----
+
+# Delete teams that are not configured
+delete_unconfigured_teams: true
+
+# Remove members that are not configured
+remove_members_without_team: true

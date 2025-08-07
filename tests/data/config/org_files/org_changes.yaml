@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2025 DB Systel GmbH
+# SPDX-License-Identifier: CC0-1.0
+
+# ------------------------------------------------------------------------------
+# General configuration for the GitHub organisation
+# ------------------------------------------------------------------------------
+
+# Name of the GitHub organisation
+org_name: TEST_GITHUB_ORG
+org_owners:
+  - TEST_USER
+
+# Default settings. Will be overridden if set in a team.
+# If neither defaults nor team settings are present:
+# - when creating a new team, will take GitHub's defaults.
+# - when syncing settting of a team, will not touch the current status.
+defaults:
+  team:
+    # Description of a team
+    # description: ""
+    # Level of privacy of a team. Can be "secret" or "closed"
+    privacy: "secret"
+    # Notification setting of a team. Can be "notifications_enabled" or "notifications_disabled"
+    notification_setting: "notifications_enabled"

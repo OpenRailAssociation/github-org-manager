@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2025 DB Systel GmbH
+# SPDX-License-Identifier: CC0-1.0
+
+Test1:
+  description: First test team
+  member:
+
+Test2:
+  privacy: secret
+  description: Second test team
+  member:

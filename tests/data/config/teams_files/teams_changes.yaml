@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2025 DB Systel GmbH
+# SPDX-License-Identifier: CC0-1.0
+
+Test1:
+  description: First test team with a new description
+  privacy: closed
+  member:
+    - TEST_USER
+
+Test2:
+  parent: Test1
+  privacy: closed
+  description: Second test team
+  maintainer:
+    - TEST_USER
+
+Test3:
+  notification_setting: notifications_disabled
+  privacy: closed
+
+Test3-child:
+  parent: Test3
+  description: Child of Test3
+  privacy: closed
+  member:
+    - TEST_USER
+
+Test4:
+  member:

@@ -201,9 +201,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         return True
 
     def _is_user_authenticated_user(self, user: NamedUser) -> bool:
-        """Check if a given NamedUser is the authenticated user"""
-        if user.login == self.gh.get_user().login:
-            return True
+        """Check if a given NamedUser is the authenticated user. If logging in via App, this will
+        always return False, as the authenticated user is the App itself"""
+        try:
+            if user.login == self.gh.get_user().login:
+                return True
+        except GithubException as e:
+            if e.status == 403 and "Resource not accessible by integration" in str(e):
+                logging.debug("Cannot check if user is authenticated, as this is an App login")
+                return False
+            raise
         return False
 
     def sync_org_owners(self, dry: bool = False, force: bool = False) -> None:

@@ -11,12 +11,88 @@ import sys
 from typing import Any
 
 import yaml
+from jsonschema import FormatChecker, validate
+from jsonschema.exceptions import ValidationError
 
 # Global files with settings for the app and org, e.g. GitHub token and org name
 ORG_CONFIG_FILE = r"org\.ya?ml"
 APP_CONFIG_FILE = r"app\.ya?ml"
 TEAM_CONFIG_DIR = "teams"
 TEAM_CONFIG_FILES = r".+\.ya?ml"
+
+# Schemas for config validation
+APP_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "github_token": {"type": "string"},
+        "github_app_id": {"type": "integer"},
+        "github_app_private_key": {"type": "string"},
+        "remove_members_without_team": {"type": "boolean"},
+        "delete_unconfigured_teams": {"type": "boolean"},
+    },
+    "additionalProperties": False,
+}
+ORG_CONFIG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "org_name": {"type": "string"},
+        "org_owners": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1,
+        },
+        "defaults": {
+            "type": "object",
+            "properties": {
+                "team": {
+                    "type": "object",
+                    "properties": {
+                        "description": {"type": "string"},
+                        "privacy": {"type": "string", "enum": ["secret", "closed"]},
+                        "notification_setting": {
+                            "type": "string",
+                            "enum": ["notifications_enabled", "notifications_disabled"],
+                        },
+                    },
+                    "additionalProperties": False,
+                }
+            },
+            "additionalProperties": False,
+        },
+    },
+    "additionalProperties": False,
+    "required": ["org_name", "org_owners"],
+}
+TEAM_CONFIG_SCHEMA = {
+    "type": "object",
+    "patternProperties": {
+        "^[a-zA-Z0-9 _\\-]+$": {
+            "type": "object",
+            "properties": {
+                "description": {"type": "string"},
+                "privacy": {"type": "string", "enum": ["secret", "closed"]},
+                "notification_setting": {
+                    "type": "string",
+                    "enum": ["notifications_enabled", "notifications_disabled"],
+                },
+                "maintainer": {"type": "array", "items": {"type": "string"}},
+                "member": {"type": "array", "items": {"type": "string"}},
+                "parent": {"type": "string"},
+                "repos": {
+                    "type": "object",
+                    "propertyNames": {"type": "string"},
+                    "additionalProperties": {
+                        "type": "string",
+                        "enum": ["pull", "triage", "push", "maintain", "admin"],
+                    },
+                },
+            },
+            "additionalProperties": False,
+        }
+    },
+    "additionalProperties": False,
+    "required": [],
+}
 
 
 def _find_matching_files(directory: str, pattern: str, only_one: bool = False) -> list[str]:
@@ -85,6 +161,16 @@ def _read_config_file(file: str) -> dict:
     return config
 
 
+def _validate_config_schema(file: str, cfg: dict, schema: dict) -> None:
+    """Validate the config against a JSON schema"""
+    try:
+        validate(instance=cfg, schema=schema, format_checker=FormatChecker())
+    except ValidationError as e:
+        logging.critical("Config validation of file %s failed: %s", file, e.message)
+        raise ValueError(e) from None
+    logging.debug("Config in file %s validated successfully against schema.", file)
+
+
 def parse_config_files(path: str) -> tuple[dict[str, str | dict[str, str]], dict, dict]:
     """Parse all relevant files in the configuration directory. Returns a tuple
     of org config, app config, and merged teams config"""
@@ -95,7 +181,9 @@ def parse_config_files(path: str) -> tuple[dict[str, str | dict[str, str]], dict
 
     # Read and parse config files for app and org
     cfg_app = _read_config_file(cfg_app_files[0])
+    _validate_config_schema(file=cfg_app_files[0], cfg=cfg_app, schema=APP_CONFIG_SCHEMA)
     cfg_org = _read_config_file(cfg_org_files[0])
+    _validate_config_schema(file=cfg_org_files[0], cfg=cfg_org, schema=ORG_CONFIG_SCHEMA)
 
     # For the teams config files, we parse and combine them as there may be multiple
     cfg_teams: dict[str, Any] = {}
@@ -103,6 +191,7 @@ def parse_config_files(path: str) -> tuple[dict[str, str | dict[str, str]], dict
     # Compare their keys (team names). They must not be defined multiple times!
     for cfg_team_file in cfg_teams_files:
         cfg = _read_config_file(cfg_team_file)
+        _validate_config_schema(file=cfg_team_file, cfg=cfg, schema=TEAM_CONFIG_SCHEMA)
         if overlap := set(cfg_teams.keys()) & set(cfg.keys()):
             logging.critical(
                 "The config file '%s' contains keys that are also defined in "

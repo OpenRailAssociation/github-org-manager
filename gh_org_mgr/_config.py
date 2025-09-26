@@ -75,8 +75,12 @@ TEAM_CONFIG_SCHEMA = {
                     "type": "string",
                     "enum": ["notifications_enabled", "notifications_disabled"],
                 },
-                "maintainer": {"type": "array", "items": {"type": "string"}},
-                "member": {"type": "array", "items": {"type": "string"}},
+                "maintainer": {
+                    "oneOf": [{"type": "null"}, {"type": "array", "items": {"type": "string"}}]
+                },
+                "member": {
+                    "oneOf": [{"type": "null"}, {"type": "array", "items": {"type": "string"}}]
+                },
                 "parent": {"type": "string"},
                 "repos": {
                     "type": "object",

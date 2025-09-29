@@ -3,9 +3,8 @@
 
 Test1:
   description: First test team
-  member:
+  member: []
 
 Test2:
   privacy: secret
   description: Second test team
-  member:

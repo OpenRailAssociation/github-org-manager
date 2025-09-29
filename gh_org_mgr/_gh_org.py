@@ -45,6 +45,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     configured_org_owners: list[str] = field(default_factory=list)
     org_members: list[NamedUser] = field(default_factory=list)
     current_teams: dict[Team, dict] = field(default_factory=dict)
+    current_teams_str: list[str] = field(default_factory=list)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
     newly_added_users: list[NamedUser] = field(default_factory=list)
     current_repos_teams: dict[Repository, dict[Team, str]] = field(default_factory=dict)
@@ -290,18 +291,65 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         """Get teams of the existing organisation"""
         for team in list(self.org.get_teams()):
             self.current_teams[team] = {"members": {}, "repos": {}}
+        self.current_teams_str = [team.name for team in self.current_teams]
 
-    def create_missing_teams(self, dry: bool = False):
-        """Find out which teams are configured but not part of the org yet"""
+    def ensure_team_hierarchy(self) -> None:
+        """Check if all configured parent teams make sense: either they exist already or will be
+        created during this run"""
 
         # Get list of current teams
         self._get_current_teams()
 
-        # Get the names of the existing teams
-        existent_team_names = [team.name for team in self.current_teams]
+        # First, check whether all configured parent teams exist or will be created
+        for team, attributes in self.configured_teams.items():
+            if parent := attributes.get("parent"):  # type: ignore
+                if parent not in self.configured_teams:
+                    if parent not in self.current_teams_str:
+                        logging.critical(
+                            "The team '%s' is configured with parent team '%s', but this parent "
+                            "team does not exist and is not configured to be created. "
+                            "Cannot continue.",
+                            team,
+                            parent,
+                        )
+                        sys.exit(1)
+                    else:
+                        logging.debug(
+                            "The team '%s' is configured with parent team '%s', "
+                            "which already exists",
+                            team,
+                            parent,
+                        )
+                else:
+                    logging.debug(
+                        "The team '%s' is configured with parent team '%s', "
+                        "which will be created during this run",
+                        team,
+                        parent,
+                    )
+
+        # Second, order the teams in a way that parent teams are created before child teams
+        ordered_teams: dict[str, dict | None] = {}
+        while len(ordered_teams) < len(self.configured_teams):
+            for team, attributes in self.configured_teams.items():
+                # Team already ordered
+                if team in ordered_teams:
+                    continue
+                # Team has parent, but parent not ordered yet
+                if parent := attributes.get("parent"):  # type: ignore
+                    if parent not in ordered_teams:
+                        continue
+                # Team has no parent, or parent already ordered
+                ordered_teams[team] = attributes
+        # Overwrite configured teams with ordered ones
+        self.configured_teams = ordered_teams
+
+    def create_missing_teams(self, dry: bool = False) -> None:
+        """Find out which teams are configured but not part of the org yet"""
 
         for team, attributes in self.configured_teams.items():
-            if team not in existent_team_names:
+            if team not in self.current_teams_str:
+                # If a parent team is configured, try to get its ID
                 if parent := attributes.get("parent"):  # type: ignore
                     try:
                         parent_id = self.org.get_team_by_slug(sluggify_teamname(parent)).id
@@ -328,6 +376,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                             privacy="closed",
                         )
 
+                # No parent team configured
                 else:
                     logging.info("Creating team '%s' without parent", team)
                     self.stats.create_team(team)

@@ -34,7 +34,7 @@ def log_progress(message: str) -> None:
         sys.stderr.write("\r\033[K")
         sys.stderr.flush()
     else:
-        sys.stderr.write(f"\r\033[K⏳ {message}")
+        sys.stderr.write(f"\r\033[K⏳ {message}\n")
         sys.stderr.flush()
 
 

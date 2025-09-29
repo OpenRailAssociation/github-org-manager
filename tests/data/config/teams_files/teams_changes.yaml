@@ -14,16 +14,16 @@ Test2:
   maintainer:
     - TEST_USER
 
-Test3:
-  notification_setting: notifications_disabled
-  privacy: closed
-
 Test3-child:
   parent: Test3
   description: Child of Test3
   privacy: closed
   member:
     - TEST_USER
+
+Test3:
+  notification_setting: notifications_disabled
+  privacy: closed
 
 Test4:
   member:

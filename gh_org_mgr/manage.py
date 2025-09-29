@@ -134,6 +134,9 @@ def main():
         # Synchronise organisation owners
         log_progress("Synchronising organisation owners...")
         org.sync_org_owners(dry=args.dry, force=args.force)
+        # Validate parent/child team relationships
+        log_progress("Validating team hierarchy...")
+        org.ensure_team_hierarchy()
         # Create teams that aren't present at Github yet
         log_progress("Creating missing teams...")
         org.create_missing_teams(dry=args.dry)
@@ -164,7 +167,6 @@ def main():
         org.sync_repo_collaborator_permissions(dry=args.dry)
 
         # Debug output
-        log_progress("")  # clear progress
         logging.debug("Final dataclass:\n%s", org.pretty_print_dataclass())
         org.ratelimit()
 

@@ -592,19 +592,18 @@ all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2
 
 [[package]]
 name = "isort"
-version = "7.0.0"
+version = "8.0.0"
 description = "A Python utility / library to sort Python imports."
 optional = false
 python-versions = ">=3.10.0"
 groups = ["dev"]
 files = [
-    {file = "isort-7.0.0-py3-none-any.whl", hash = "sha256:1bcabac8bc3c36c7fb7b98a76c8abb18e0f841a3ba81decac7691008592499c1"},
-    {file = "isort-7.0.0.tar.gz", hash = "sha256:5513527951aadb3ac4292a41a16cbc50dd1642432f5e8c20057d414bdafb4187"},
+    {file = "isort-8.0.0-py3-none-any.whl", hash = "sha256:184916a933041c7cf718787f7e52064f3c06272aff69a5cb4dc46497bd8911d9"},
+    {file = "isort-8.0.0.tar.gz", hash = "sha256:fddea59202f231e170e52e71e3510b99c373b6e571b55d9c7b31b679c0fed47c"},
 ]
 
 [package.extras]
 colors = ["colorama"]
-plugins = ["setuptools"]
 
 [[package]]
 name = "jsonschema"
@@ -1189,7 +1188,7 @@ colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
 dill = [
     {version = ">=0.2", markers = "python_version < \"3.11\""},
     {version = ">=0.3.7", markers = "python_version >= \"3.12\""},
-    {version = ">=0.3.6", markers = "python_version == \"3.11\""},
+    {version = ">=0.3.6", markers = "python_version >= \"3.11\""},
 ]
 isort = ">=5,<5.13 || >5.13,<9"
 mccabe = ">=0.6,<0.8"
@@ -1833,4 +1832,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "f10e5c7a005c5fbd67f6c995b45649610d5760f982d4d09dfeac18ad51dc73cc"
+content-hash = "72252e3bf8386e1e29d676dc35a56f4ca5694254f4105e2bfab394abce869ea2"

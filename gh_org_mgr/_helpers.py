@@ -2,18 +2,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Helper functions"""
+"""Helper functions."""
 
 import logging
 import sys
 from dataclasses import asdict
+from typing import Any
 
 
 def configure_logger(verbose: bool = False, debug: bool = False) -> logging.Logger:
-    """Set logging options"""
+    """Set logging options."""
     log = logging.getLogger()
     logging.basicConfig(
-        encoding="utf-8",
         format="[%(asctime)s] %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
@@ -28,7 +28,7 @@ def configure_logger(verbose: bool = False, debug: bool = False) -> logging.Logg
 
 
 def log_progress(message: str) -> None:
-    """Log progress messages to stderr"""
+    """Log progress messages to stderr."""
     # Clear line if no message is given
     if not message:
         sys.stderr.write("\r\033[K")
@@ -39,13 +39,12 @@ def log_progress(message: str) -> None:
 
 
 def sluggify_teamname(team: str) -> str:
-    """Slugify a GitHub team name"""
-    # TODO: this is very naive, no other special chars are
-    # supported, or multiple spaces etc.
+    """Slugify a GitHub team name."""
+    # NOTE: this is very naive, no other special chars are supported, or multiple spaces etc.
     return team.replace(" ", "-")
 
 
-def compare_two_lists(list1: list[str], list2: list[str]):
+def compare_two_lists(list1: list[str], list2: list[str]) -> tuple[list[str], list[str], list[str]]:
     """
     Compares two lists of strings and returns a tuple containing elements
     missing in each list and common elements.
@@ -84,25 +83,26 @@ def compare_two_lists(list1: list[str], list2: list[str]):
 
 def compare_two_dicts(dict1: dict, dict2: dict) -> dict[str, dict[str, str | int | None]]:
     """Compares two dictionaries. Assume that the keys are the same. Output
-    a dict with keys that have differing values"""
+    a dict with keys that have differing values.
+    """
     # Create an empty dictionary to store differences
     differences = {}
 
     # Iterate through the keys (assuming both dictionaries have the same keys)
-    for key in dict1:
+    for key, value in dict1.items():
         # Compare the values for each key
-        if dict1[key] != dict2[key]:
-            differences[key] = {"dict1": dict1[key], "dict2": dict2[key]}
+        if value != dict2[key]:
+            differences[key] = {"dict1": value, "dict2": dict2[key]}
 
     return differences
 
 
 def dict_to_pretty_string(dictionary: dict, sensible_keys: None | list[str] = None) -> str:
-    """Convert a dict to a pretty-printed output"""
+    """Convert a dict to a pretty-printed output."""
 
     # Censor sensible fields
     def censor_half_string(string: str) -> str:
-        """Censor 50% of a string (rounded up)"""
+        """Censor 50% of a string (rounded up)."""
         half1 = int(len(string) / 2)
         half2 = len(string) - half1
         return string[:half1] + "*" * (half2)
@@ -114,7 +114,7 @@ def dict_to_pretty_string(dictionary: dict, sensible_keys: None | list[str] = No
             dictionary[key] = censor_half_string(value)
 
     # Print dict nicely
-    def pretty(d, indent=0):
+    def pretty(d: dict, indent: int = 0) -> str:
         string = ""
         for key, value in d.items():
             string += "  " * indent + str(key) + ":\n"
@@ -128,13 +128,13 @@ def dict_to_pretty_string(dictionary: dict, sensible_keys: None | list[str] = No
     return pretty(dictionary)
 
 
-def pretty_print_dataclass(dc):
-    """Convert dataclass to a pretty-printed output"""
+def pretty_print_dataclass(dc: Any) -> None:  # noqa: ANN401
+    """Convert dataclass to a pretty-printed output."""
     dict_to_pretty_string(asdict(dc))
 
 
-def implement_changes_into_class(dc_object, **changes: bool | str | list[str]):
-    """Smartly add changes to a (data)class object"""
+def implement_changes_into_class(dc_object: object, **changes: bool | str | list[str]) -> None:
+    """Smartly add changes to a (data)class object."""
     for attribute, value in changes.items():
         current_value = getattr(dc_object, attribute)
         # attribute is list
@@ -148,5 +148,3 @@ def implement_changes_into_class(dc_object, **changes: bool | str | list[str]):
         # All other cases, bool
         else:
             setattr(dc_object, attribute, value)
-
-    return dc_object

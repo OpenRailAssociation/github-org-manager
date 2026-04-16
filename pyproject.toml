@@ -2,67 +2,97 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-[tool.poetry]
+[project]
 name = "github-org-manager"
 version = "0.7.6"
 description = "Manage a GitHub Organization, its teams, repository permissions, and more"
-authors = ["Max Mehl <max.mehl@deutschebahn.com>"]
+authors = [{ name = "Max Mehl", email = "max.mehl@deutschebahn.com" }]
+requires-python = ">=3.10,<4"
 readme = "README.md"
 license = "Apache-2.0"
-repository = "https://github.com/OpenRailAssociation/github-org-manager"
-keywords = ["github", "github-management", "permissions", "access-control"]
-classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Environment :: Console",
-  "Topic :: Software Development :: Version Control :: Git",
-  "Topic :: Utilities",
-  "Intended Audience :: Developers",
-  "Intended Audience :: System Administrators",
-  "License :: OSI Approved :: Apache Software License",
+keywords = [
+    "github",
+    "github-management",
+    "permissions",
+    "access-control",
 ]
-packages = [{ include = "gh_org_mgr" }]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Topic :: Software Development :: Version Control :: Git",
+    "Topic :: Utilities",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "pygithub>=2.8.1,<3",
+    "pyyaml>=6.0.3,<7",
+    "requests>=2.32.5,<3",
+    "python-slugify>=8.0.4,<9",
+    "jsonschema>=4.25.1,<5",
+]
 
-[tool.poetry.scripts]
-gh-org-mgr = 'gh_org_mgr.manage:main'
+[project.urls]
+Repository = "https://github.com/OpenRailAssociation/github-org-manager"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-pygithub = "^2.8.1"
-pyyaml = "^6.0.3"
-requests = "^2.32.5"
-python-slugify = "^8.0.4"
-jsonschema = "^4.25.1"
+[project.scripts]
+gh-org-mgr = "gh_org_mgr.manage:main"
 
-[tool.poetry.group.dev.dependencies]
-black = "^26.0.0"
-isort = ">=8.0.1,<8.1.0"
-mypy = "^1.18.2"
-pylint = "^4.0.0"
-types-pyyaml = "^6.0.12.20250915"
-types-requests = "^2.32.4.20250913"
-bump-my-version = "^1.2.3"
-types-jsonschema = "^4.25.1.20250822"
+[dependency-groups]
+dev = [
+    "ruff>=0.15.10",
+    "ty>=0.0.29",
+    "bump-my-version>=1.2.3,<2",
+]
+
+[tool.uv]
+default-groups = "all"
+
+[tool.uv.build-backend]
+module-name = ["gh_org_mgr"]
+module-root = ""
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
 
-
-# FORMATTING settings
-[tool.isort]
-profile = "black"
-
-[tool.black]
+# FORMATTING and LINTING settings
+[tool.ruff]
 line-length = 100
 
-# MYPY settings
-[tool.mypy]
-files = ["gh_org_mgr/*.py"]
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "T",
+    "FBT",
+    "LOG015",
+    "COM812",
+    "ERA001",
+    "S310",
+    "D205",
+    "D212",
+    "PTH123",
+]
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = ["S101", "PLR", "PT011", "ANN001"]
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# TY settings
+[tool.ty.src]
+include = ["gh_org_mgr"]
 
 # Bump-My-Version
 [tool.bumpversion]
 commit = true
 tag = true
+sign_tags = true
 allow_dirty = false
 tag_name = "v{new_version}"
 
@@ -71,3 +101,16 @@ filename = "pyproject.toml"
 regex = true
 search = "^version = \"{current_version}\""
 replace = "version = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "uv.lock"
+search = """
+[[package]]
+name = "github-org-manager"
+version = "{current_version}"
+"""
+replace = """
+[[package]]
+name = "github-org-manager"
+version = "{new_version}"
+"""

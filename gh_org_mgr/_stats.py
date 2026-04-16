@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Dataclasses and functions for statistics"""
+"""Dataclasses and functions for statistics."""
 
 import json
 from dataclasses import dataclass, field
@@ -11,8 +11,8 @@ from ._helpers import implement_changes_into_class
 
 
 @dataclass
-class TeamChanges:  # pylint: disable=too-many-instance-attributes
-    """Dataclass holding information about the changes made to a team"""
+class TeamChanges:
+    """Dataclass holding information about the changes made to a team."""
 
     newly_created: bool = False
     deleted: bool = False
@@ -25,8 +25,8 @@ class TeamChanges:  # pylint: disable=too-many-instance-attributes
 
 
 @dataclass
-class RepoChanges:  # pylint: disable=too-many-instance-attributes
-    """Dataclass holding information about the changes made to a repository"""
+class RepoChanges:
+    """Dataclass holding information about the changes made to a repository."""
 
     changed_permissions_for_teams: list[str] = field(default_factory=list)
     removed_teams: list[str] = field(default_factory=list)
@@ -35,8 +35,8 @@ class RepoChanges:  # pylint: disable=too-many-instance-attributes
 
 
 @dataclass
-class OrgChanges:  # pylint: disable=too-many-instance-attributes
-    """Dataclass holding general statistics about the changes made to the organization"""
+class OrgChanges:
+    """Dataclass holding general statistics about the changes made to the organization."""
 
     dry: bool = False
     added_owners: list[str] = field(default_factory=list)
@@ -50,18 +50,18 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
     # Owners
     # --------------------------------------------------------------------------
     def add_owner(self, user: str) -> None:
-        """User has been added as owner"""
+        """User has been added as owner."""
         self.added_owners.append(user)
 
     def degrade_owner(self, user: str) -> None:
-        """User has been degraded from owner to member"""
+        """User has been degraded from owner to member."""
         self.degraded_owners.append(user)
 
     # --------------------------------------------------------------------------
     # Teams
     # --------------------------------------------------------------------------
     def update_team(self, team_name: str, **changes: bool | str | list[str]) -> None:
-        """Update team changes"""
+        """Update team changes."""
         # Initialise team if not present
         if team_name not in self.teams:
             self.teams[team_name] = TeamChanges()
@@ -69,38 +69,38 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
         implement_changes_into_class(dc_object=self.teams[team_name], **changes)
 
     def create_team(self, team: str) -> None:
-        """Team has been created"""
+        """Team has been created."""
         self.update_team(team_name=team, newly_created=True)
 
     def edit_team_config(self, team: str, new_config: str) -> None:
-        """Team config has been changed"""
+        """Team config has been changed."""
         self.update_team(team_name=team, changed_config=new_config)
 
     def delete_team(self, team: str, deleted: bool) -> None:
-        """Teams are not configured"""
+        """Teams are not configured."""
         self.update_team(team_name=team, unconfigured=True, deleted=deleted)
 
     # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
     def add_team_member(self, team: str, user: str) -> None:
-        """User has been added to team"""
+        """User has been added to team."""
         self.update_team(team_name=team, added_members=user)
 
     def change_team_member_role(self, team: str, user: str) -> None:
-        """User role has been changed in team"""
+        """User role has been changed in team."""
         self.update_team(team_name=team, changed_members_role=user)
 
     def pending_team_member(self, team: str, user: str) -> None:
-        """User has a pending invitation"""
+        """User has a pending invitation."""
         self.update_team(team_name=team, pending_members=user)
 
     def remove_team_member(self, team: str, user: str) -> None:
-        """User has been removed from team"""
+        """User has been removed from team."""
         self.update_team(team_name=team, removed_members=user)
 
     def remove_member_without_team(self, user: str, removed: bool) -> None:
-        """User is not in any team"""
+        """User is not in any team."""
         self.members_without_team.append(user)
         if removed:
             self.removed_members.append(user)
@@ -109,7 +109,7 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
     # Repos
     # --------------------------------------------------------------------------
     def update_repo(self, repo_name: str, **changes: bool | str | list[str]) -> None:
-        """Update team changes"""
+        """Update team changes."""
         # Initialise repo if not present
         if repo_name not in self.teams:
             self.repos[repo_name] = RepoChanges()
@@ -117,28 +117,28 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
         implement_changes_into_class(dc_object=self.repos[repo_name], **changes)
 
     def change_repo_team_permissions(self, repo: str, team: str, perm: str) -> None:
-        """Team permissions have been changed for a repo"""
+        """Team permissions have been changed for a repo."""
         self.update_repo(repo_name=repo, changed_permissions_for_teams=f"{team}: {perm}")
 
     def remove_team_from_repo(self, repo: str, team: str) -> None:
-        """Team has been removed form a repo"""
+        """Team has been removed form a repo."""
         self.update_repo(repo_name=repo, removed_teams=team)
 
     def document_unconfigured_team_permissions(self, repo: str, team: str, perm: str) -> None:
-        """Unconfigured team has permissions on repo"""
+        """Unconfigured team has permissions on repo."""
         self.update_repo(repo_name=repo, unconfigured_teams_with_permissions=f"{team}: {perm}")
 
     def remove_repo_collaborator(self, repo: str, user: str) -> None:
-        """Remove collaborator"""
+        """Remove collaborator."""
         self.update_repo(repo_name=repo, removed_collaborators=user)
 
     # --------------------------------------------------------------------------
     # Output
     # --------------------------------------------------------------------------
     def changes_into_dict(self) -> dict:
-        """Convert dataclass to dict, and only use classes that are not empty/False"""
+        """Convert dataclass to dict, and only use classes that are not empty/False."""
         changes_dict: dict[str, list[str] | dict] = {
-            key: value  # type: ignore
+            key: value
             for key, value in {
                 "dry": self.dry,
                 "added_owners": self.added_owners,
@@ -149,10 +149,10 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
                 "repos": self.repos,
             }.items()
             if value  # Exclude empty values
-        }
+        }  # ty:ignore[invalid-assignment]
 
-        team_changes: dict[str, TeamChanges] = changes_dict.get("teams", {})  # type: ignore
-        repo_changes: dict[str, RepoChanges] = changes_dict.get("repos", {})  # type: ignore
+        team_changes: dict[str, TeamChanges] = changes_dict.get("teams", {})  # ty:ignore[invalid-assignment]
+        repo_changes: dict[str, RepoChanges] = changes_dict.get("repos", {})  # ty:ignore[invalid-assignment]
 
         for team, tchanges in team_changes.items():
             new_changes = {
@@ -160,7 +160,7 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
                 for key, value in tchanges.__dict__.items()
                 if value  # Exclude empty values
             }
-            team_changes[team] = new_changes  # type: ignore
+            team_changes[team] = new_changes  # ty:ignore[invalid-assignment]
         changes_dict["teams"] = team_changes
 
         for repo, rchanges in repo_changes.items():
@@ -169,16 +169,15 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
                 for key, value in rchanges.__dict__.items()
                 if value  # Exclude empty values
             }
-            repo_changes[repo] = new_changes  # type: ignore
+            repo_changes[repo] = new_changes  # ty:ignore[invalid-assignment]
         changes_dict["repos"] = repo_changes
 
         return changes_dict
 
-    def print_changes(  # pylint: disable=too-many-branches, too-many-statements
+    def print_changes(  # noqa: C901, PLR0912, PLR0915
         self, orgname: str, output: str, dry: bool
     ) -> None:
-        """Print the changes, either in pretty format or as JSON"""
-
+        """Print the changes, either in pretty format or as JSON."""
         # Add dry run information to stats dataclass
         self.dry = dry
 
@@ -188,14 +187,14 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
             print(json.dumps(changes_dict, indent=2))
         else:
             output = (
-                f"#-------------------------------------{len(orgname)*'-'}\n"
+                f"#-------------------------------------{len(orgname) * '-'}\n"
                 f"# Changes made to GitHub organisation {orgname}\n"
-                f"#-------------------------------------{len(orgname)*'-'}\n\n"
+                f"#-------------------------------------{len(orgname) * '-'}\n\n"
             )
             if dry:
                 output += "⚠️ Dry-run mode, no changes executed\n\n"
             if self.added_owners:
-                output += f"➕ Added owners: {', '.join(self.added_owners)}\n"
+                output += f"➕ Added owners: {', '.join(self.added_owners)}\n"  # noqa: RUF001
             if self.degraded_owners:
                 output += f"🔻 Degraded owners: {', '.join(self.degraded_owners)}\n"
             if self.members_without_team:
@@ -219,7 +218,7 @@ class OrgChanges:  # pylint: disable=too-many-instance-attributes
                         for item in tchanges.changed_config:
                             output += f"      - {item}\n"
                     if tchanges.added_members:
-                        output += "    ➕ Added members:\n"
+                        output += "    ➕ Added members:\n"  # noqa: RUF001
                         for item in tchanges.added_members:
                             output += f"      - {item}\n"
                     if tchanges.changed_members_role:

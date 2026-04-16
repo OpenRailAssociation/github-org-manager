@@ -8,6 +8,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   selftest:
     runs-on: ubuntu-24.04
@@ -16,7 +19,9 @@ jobs:
       GITHUB_APP_PRIVATE_KEY: ${{ secrets.TEST_GITHUB_APP_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: ./.github/actions/poetrybuild
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
       - name: Replace data in config files
         run: |
           sed -i "s/TEST_GITHUB_ORG/${{ secrets.TEST_GITHUB_ORG }}/g" tests/data/config/org_files/*.yaml
@@ -28,14 +33,14 @@ jobs:
           cp tests/data/config/teams_files/teams_changes.yaml tests/data/config/teams/teams.yaml
           cp tests/data/config/org_files/org_changes.yaml tests/data/config/org.yaml
       - name: Run 1 (changes) - dry run
-        run: poetry run gh-org-mgr sync -c tests/data/config/ --dry -vv
+        run: uv run gh-org-mgr sync -c tests/data/config/ --dry -vv
       - name: Run 1 (changes) - prod run
-        run: poetry run gh-org-mgr sync -c tests/data/config/ -vv
+        run: uv run gh-org-mgr sync -c tests/data/config/ -vv
       - name: Prepare for second run, reverting to original state
         run: |
           cp tests/data/config/teams_files/teams_orig.yaml tests/data/config/teams/teams.yaml
           cp tests/data/config/org_files/org_orig.yaml tests/data/config/org.yaml
       - name: Run 2 (revert) - dry run
-        run: poetry run gh-org-mgr sync -c tests/data/config/ --dry -vv
+        run: uv run gh-org-mgr sync -c tests/data/config/ --dry -vv
       - name: Run 2 (revert) - prod run
-        run: poetry run gh-org-mgr sync -c tests/data/config/ -vv
+        run: uv run gh-org-mgr sync -c tests/data/config/ -vv

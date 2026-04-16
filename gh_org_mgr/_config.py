@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Handling the private and organisation configuration"""
+"""Handling the private and organisation configuration."""
 
 import logging
-import os
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -100,21 +100,22 @@ TEAM_CONFIG_SCHEMA = {
 
 
 def _find_matching_files(directory: str, pattern: str, only_one: bool = False) -> list[str]:
-    """
-    Get all files in a directory matching a regex pattern.
+    """Get all files in a directory matching a regex pattern.
 
     Args:
-    - directory: Path to the directory
-    - pattern: Regular expression pattern to match filenames
-    - only_one: Whether only the first match shall be returned.
+        directory: Path to the directory.
+        pattern: Regular expression pattern to match filenames.
+        only_one: Whether only the first match shall be returned.
 
     Returns:
-    - List of filenames matching the pattern
+        List of filenames matching the pattern.
     """
     matching_files: list[str] = []
 
+    dir_path = Path(directory)
+
     # Validate directory existence
-    if not os.path.isdir(directory):
+    if not dir_path.is_dir():
         logging.error("'%s' is not a valid directory", directory)
 
     else:
@@ -122,16 +123,15 @@ def _find_matching_files(directory: str, pattern: str, only_one: bool = False) -
         regex_pattern = re.compile(pattern + "$")
 
         # Traverse the directory and find matching files
-        for file_name in os.listdir(directory):
-            if regex_pattern.match(file_name):
-                file_path = os.path.join(directory, file_name)
-                if os.path.isfile(file_path):
-                    matching_files.append(file_path)
+        for entry in dir_path.iterdir():
+            if regex_pattern.match(entry.name):
+                if entry.is_file():
+                    matching_files.append(str(entry))
                 else:
                     logging.warning(
                         "'%s' looks like a file we searched for, but it's not. "
                         "Will not consider its contents",
-                        file_path,
+                        entry,
                     )
 
         if only_one and len(matching_files) > 1:
@@ -154,7 +154,7 @@ def _find_matching_files(directory: str, pattern: str, only_one: bool = False) -
 
 
 def _read_config_file(file: str) -> dict:
-    """Return dict of a YAML file"""
+    """Return dict of a YAML file."""
     logging.debug("Attempting to parse YAML file %s", file)
     with open(file, encoding="UTF-8") as yamlfile:
         config: dict = yaml.safe_load(yamlfile)
@@ -166,7 +166,7 @@ def _read_config_file(file: str) -> dict:
 
 
 def _validate_config_schema(file: str, cfg: dict, schema: dict) -> None:
-    """Validate the config against a JSON schema"""
+    """Validate the config against a JSON schema."""
     try:
         validate(instance=cfg, schema=schema, format_checker=FormatChecker())
     except ValidationError as e:
@@ -177,11 +177,12 @@ def _validate_config_schema(file: str, cfg: dict, schema: dict) -> None:
 
 def parse_config_files(path: str) -> tuple[dict[str, str | dict[str, str]], dict, dict]:
     """Parse all relevant files in the configuration directory. Returns a tuple
-    of org config, app config, and merged teams config"""
+    of org config, app config, and merged teams config.
+    """
     # Find the relevant config files for app, org, and teams
     cfg_app_files = _find_matching_files(path, APP_CONFIG_FILE, only_one=True)
     cfg_org_files = _find_matching_files(path, ORG_CONFIG_FILE, only_one=True)
-    cfg_teams_files = _find_matching_files(os.path.join(path, TEAM_CONFIG_DIR), TEAM_CONFIG_FILES)
+    cfg_teams_files = _find_matching_files(str(Path(path) / TEAM_CONFIG_DIR), TEAM_CONFIG_FILES)
 
     # Read and parse config files for app and org
     cfg_app = _read_config_file(cfg_app_files[0])

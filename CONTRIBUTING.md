@@ -11,9 +11,9 @@ This Project welcomes contributions, suggestions, and feedback. All contribution
 
 ## Development setup
 
-Starting development is as easy as installing Python `poetry` and running `poetry install` once.
+Starting development is as easy as installing [uv](https://docs.astral.sh/uv/) and running `uv sync` once.
 
-In order to run the project in the new virtual environment, run `poetry run gh-org-mgr`.
+In order to run the project in the new virtual environment, run `uv run gh-org-mgr`.
 
 ---
 Based on [GitHub's Minimum Viable Governance (MVG)](https://github.com/github/MVG). Licensed under the [CC-BY 4.0 License](https://creativecommons.org/licenses/by/4.0/).

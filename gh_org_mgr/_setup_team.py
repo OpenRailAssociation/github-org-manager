@@ -2,10 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Functions to help with setting up new team"""
+"""Functions to help with setting up new team."""
 
 import logging
-from os.path import isfile, join
+from pathlib import Path
 from string import Template
 
 from slugify import slugify
@@ -21,7 +21,8 @@ ${team_name}:
 
 def _sanitize_two_exclusive_options(option1: str | None, option2: str | None) -> bool:
     """Only of of these two options must be provided (not None, empty string is
-    OK). Returns True if no error ocourred"""
+    OK). Returns True if no error ocourred.
+    """
     # There must not be a file_path and config_path provided at the same time
     if option1 is not None and option2 is not None:
         logging.critical("The two options must not be provided at the same time. Choose only one.")
@@ -34,9 +35,10 @@ def _sanitize_two_exclusive_options(option1: str | None, option2: str | None) ->
     return True
 
 
-def _fill_template(template: str, **fillers) -> str:
+def _fill_template(template: str, **fillers: str) -> str:
     """Fill a template using a dicts with keys and their values. The function
-    looks for the keys starting with '$' characters"""
+    looks for the keys starting with '$' characters.
+    """
     return Template(template).substitute(fillers).lstrip()
 
 
@@ -65,7 +67,7 @@ def _ask_user_action(question: str, *options: str) -> str:
 
 
 def write_file(file: str, content: str, append: bool = False) -> None:
-    """Write to a file. Overrides by default, but can also append"""
+    """Write to a file. Overrides by default, but can also append."""
     mode = "a" if append else "w"
     try:
         with open(file, mode=mode, encoding="UTF-8") as writer:
@@ -82,20 +84,20 @@ def write_file(file: str, content: str, append: bool = False) -> None:
 def setup_team(
     team_name: str, config_path: str | None = None, file_path: str | None = None
 ) -> None:
-    """Set up a new team inside the config dir with a given name"""
+    """Set up a new team inside the config dir with a given name."""
     _sanitize_two_exclusive_options(config_path, file_path)
 
     # Come up with file name based on team name in the given config directory
     if not file_path:
         # Combine config dir and file name
-        file_path = join(config_path, "teams", slugify(team_name) + ".yaml")  # type: ignore
+        file_path = str(Path(config_path) / "teams" / (slugify(team_name) + ".yaml"))  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
         logging.debug("Derived file path: %s", file_path)
 
     # Fill template
     yaml_content = _fill_template(TEAM_TEMPLATE, team_name=team_name)
 
     # If file already exists, ask if file should be extended or overridden, or abort
-    if isfile(file_path):
+    if Path(file_path).is_file():
         options = ("override", "append", "print", "skip")
         action = _ask_user_action(
             f"The file {file_path} exists, what would you like to do?", *options

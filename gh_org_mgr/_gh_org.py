@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Class for the GitHub organization which contains most of the logic"""
+"""Class for the GitHub organization which contains most of the logic."""
 
 import logging
 import sys
@@ -32,11 +32,11 @@ from ._stats import OrgChanges
 
 
 @dataclass
-class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
-    """Dataclass holding GH organization data and functions"""
+class GHorg:
+    """Dataclass holding GH organization data and functions."""
 
-    gh: Github = None  # type: ignore
-    org: Organization = None  # type: ignore
+    gh: Github = None  # ty:ignore[invalid-assignment]
+    org: Organization = None  # ty:ignore[invalid-assignment]
     gh_token: str = ""
     gh_app_id: str | int = ""
     gh_app_private_key: str = ""
@@ -58,7 +58,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     stats: OrgChanges = field(default_factory=OrgChanges)
 
     # Re-usable Constants
-    TEAM_CONFIG_FIELDS: dict[str, dict[str, str | None]] = field(  # pylint: disable=invalid-name
+    TEAM_CONFIG_FIELDS: dict[str, dict[str, str | None]] = field(
         default_factory=lambda: {
             "parent": {"fallback_value": None},
             "privacy": {"fallback_value": "<keep-current>"},
@@ -74,7 +74,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     def login(
         self, orgname: str, token: str = "", app_id: str | int = "", app_private_key: str = ""
     ) -> None:
-        """Login to GH via PAT or App, gather org data"""
+        """Login to GH via PAT or App, gather org data."""
         # Get all login data from config and environment
         self.gh_token = get_github_secrets_from_env(env_variable="GITHUB_TOKEN", secret=token)
         self.gh_app_id = get_github_secrets_from_env(env_variable="GITHUB_APP_ID", secret=app_id)
@@ -114,23 +114,23 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         self.org = self.gh.get_organization(orgname)
         logging.debug("Gathered data from organization '%s' (%s)", self.org.login, self.org.name)
 
-    def ratelimit(self):
-        """Print current rate limit"""
+    def ratelimit(self) -> None:
+        """Print current rate limit."""
         core = self.gh.get_rate_limit().resources.core
         logging.info(
             "Current rate limit: %s/%s (reset: %s)", core.remaining, core.limit, core.reset
         )
 
     def pretty_print_dataclass(self) -> str:
-        """Convert this dataclass to a pretty-printed output"""
+        """Convert this dataclass to a pretty-printed output."""
         return dict_to_pretty_string(asdict(self), sensible_keys=["gh_token", "gh_app_private_key"])
 
     def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
-        """Turn a username into a proper GitHub user object"""
+        """Turn a username into a proper GitHub user object."""
         try:
-            gh_user: NamedUser = self.gh.get_user(username)  # type: ignore
+            gh_user: NamedUser = self.gh.get_user(username)  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
         except UnknownObjectException:
-            logging.error(
+            logging.exception(
                 "The user '%s' configured as member of team '%s' does not "
                 "exist on GitHub. Spelling error or did they rename themselves?",
                 username,
@@ -144,11 +144,11 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     # Configuration
     # --------------------------------------------------------------------------
     def consolidate_team_config(self, default_team_configs: dict[str, str]) -> None:
-        """Complete teams configuration with default teams configs"""
+        """Complete teams configuration with default teams configs."""
         for team_name, team_config in self.configured_teams.items():
             # Handle none team configs
             if team_config is None:
-                team_config = {}
+                team_config = {}  # noqa: PLW2901
 
             # Iterate through configurable team settings. Take team config, fall
             # back to default org-wide value. If no config can be found, either
@@ -173,7 +173,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     # Owners
     # --------------------------------------------------------------------------
     def _get_current_org_owners(self) -> None:
-        """Get all owners of the org"""
+        """Get all owners of the org."""
         # Reset the user list, then build up new list
         self.current_org_owners = []
         for member in self.org.get_members(role="admin"):
@@ -181,7 +181,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
     def _check_configured_org_owners(self) -> bool:
         """Check configured owners and make them lower-case for better
-        comparison. Returns True if owners are well configured."""
+        comparison. Returns True if owners are well configured.
+        """
         # Add configured owners if they are a list
         if isinstance(self.configured_org_owners, list):
             # Make all configured users lower-case
@@ -204,19 +205,20 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
     def _is_user_authenticated_user(self, user: NamedUser) -> bool:
         """Check if a given NamedUser is the authenticated user. If logging in via App, this will
-        always return False, as the authenticated user is the App itself"""
+        always return False, as the authenticated user is the App itself.
+        """
         try:
             if user.login == self.gh.get_user().login:
                 return True
         except GithubException as e:
-            if e.status == 403 and "Resource not accessible by integration" in str(e):
+            if e.status == 403 and "Resource not accessible by integration" in str(e):  # noqa: PLR2004
                 logging.debug("Cannot check if user is authenticated, as this is an App login")
                 return False
             raise
         return False
 
-    def sync_org_owners(self, dry: bool = False, force: bool = False) -> None:
-        """Synchronise the organization owners"""
+    def sync_org_owners(self, dry: bool = False, force: bool = False) -> None:  # noqa: C901
+        """Synchronise the organization owners."""
         # Get current and configured owners
         self._get_current_org_owners()
 
@@ -287,22 +289,22 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     # --------------------------------------------------------------------------
     # Teams
     # --------------------------------------------------------------------------
-    def _get_current_teams(self):
-        """Get teams of the existing organisation"""
+    def _get_current_teams(self) -> None:
+        """Get teams of the existing organisation."""
         for team in list(self.org.get_teams()):
             self.current_teams[team] = {"members": {}, "repos": {}}
         self.current_teams_str = [team.name for team in self.current_teams]
 
     def ensure_team_hierarchy(self) -> None:
         """Check if all configured parent teams make sense: either they exist already or will be
-        created during this run"""
-
+        created during this run.
+        """
         # Get list of current teams
         self._get_current_teams()
 
         # First, check whether all configured parent teams exist or will be created
         for team, attributes in self.configured_teams.items():
-            if parent := attributes.get("parent"):  # type: ignore
+            if parent := attributes.get("parent"):  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
                 if parent not in self.configured_teams:
                     if parent not in self.current_teams_str:
                         logging.critical(
@@ -336,21 +338,19 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 if team in ordered_teams:
                     continue
                 # Team has parent, but parent not ordered yet
-                if parent := attributes.get("parent"):  # type: ignore
-                    if parent not in ordered_teams:
-                        continue
+                if (parent := attributes.get("parent")) and parent not in ordered_teams:  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
+                    continue
                 # Team has no parent, or parent already ordered
                 ordered_teams[team] = attributes
         # Overwrite configured teams with ordered ones
         self.configured_teams = ordered_teams
 
     def create_missing_teams(self, dry: bool = False) -> None:
-        """Find out which teams are configured but not part of the org yet"""
-
+        """Find out which teams are configured but not part of the org yet."""
         for team, attributes in self.configured_teams.items():
             if team not in self.current_teams_str:
                 # If a parent team is configured, try to get its ID
-                if parent := attributes.get("parent"):  # type: ignore
+                if parent := attributes.get("parent"):  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
                     try:
                         parent_id = self.org.get_team_by_slug(sluggify_teamname(parent)).id
                     except UnknownObjectException:
@@ -397,7 +397,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     def _prepare_team_config_for_sync(
         self, team_config: dict[str, str | int | Team | None]
     ) -> dict[str, str | int | None]:
-        """Turn parent values into IDs, and sort the config dictionary for better comparison"""
+        """Turn parent values into IDs, and sort the config dictionary for better comparison."""
         if parent := team_config["parent"]:
             # team coming from API request (current)
             if isinstance(parent, Team):
@@ -436,13 +436,13 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             # Use dictionary comprehensions to build the dictionaries with the
             # relevant team settings for comparison
             configured_team_configs = {
-                key: self.configured_teams[team.name].get(key)  # type: ignore
+                key: self.configured_teams[team.name].get(key)  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
                 for key in self.TEAM_CONFIG_FIELDS
                 # Only add keys that are actually in the configuration. Deals
                 # with settings that should be changed, as they are neither
                 # defined in the default or team config, and marked as
                 # <keep-current>
-                if key in self.configured_teams[team.name]  # type: ignore
+                if key in self.configured_teams[team.name]  # type: ignore[operator]  # ty:ignore[unsupported-operator]
             }
             current_team_configs = {
                 key: getattr(team, key)
@@ -450,7 +450,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 # Only compare current team settings with keys that are defined
                 # as the configured team settings. Taking out settings that
                 # shall not be changed
-                if key in self.configured_teams[team.name]  # type: ignore
+                if key in self.configured_teams[team.name]  # type: ignore[operator]  # ty:ignore[unsupported-operator]
             }
 
             # Resolve parent team id from parent Team object or team string, and sort
@@ -480,7 +480,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 # Execute team setting changes
                 if not dry:
                     try:
-                        team.edit(name=team.name, **configured_team_configs)  # type: ignore
+                        team.edit(name=team.name, **configured_team_configs)  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
                     except GithubException as exc:
                         logging.critical(
                             "Team '%s' settings could not be edited. Error: \n%s",
@@ -494,8 +494,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     # --------------------------------------------------------------------------
     # Members
     # --------------------------------------------------------------------------
-    def _get_current_org_members(self):
-        """Get all ordinary members of the org"""
+    def _get_current_org_members(self) -> None:
+        """Get all ordinary members of the org."""
         # Reset the user list, then build up new list
         self.org_members = []
         for member in self.org.get_members(role="member"):
@@ -504,21 +504,17 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     def _get_configured_team_members(
         self, team_config: dict, team_name: str, role: str
     ) -> list[str]:
-        """Read configured members/maintainers from the configuration"""
-
+        """Read configured members/maintainers from the configuration."""
         if isinstance(team_config, dict) and team_config.get(role):
-            configured_team_members = []
-            for user in team_config.get(role, []):
-                configured_team_members.append(user)
-
-            return configured_team_members
+            return list(team_config.get(role, []))
 
         logging.debug("Team '%s' has no configured %ss", team_name, role)
         return []
 
     def _get_current_team_members(self, team: Team) -> dict[NamedUser, str]:
         """Return dict of current users with their respective roles. Also
-        contains members of child teams"""
+        contains members of child teams.
+        """
         current_users: dict[NamedUser, str] = {}
         for role in ("member", "maintainer"):
             # Make a two-step check whether person is actually in team, as
@@ -528,15 +524,15 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
         return current_users
 
-    def _add_or_update_user_in_team(self, team: Team, user: NamedUser, role: str):
-        """Add or update membership of a user in a team"""
+    def _add_or_update_user_in_team(self, team: Team, user: NamedUser, role: str) -> None:
+        """Add or update membership of a user in a team."""
         team.add_membership(member=user, role=role)
         # Document that the user has just been added to a team. Relevant when we
         # will later find users without team membership
         self.newly_added_users.append(user)
 
-    def sync_teams_members(self, dry: bool = False) -> None:  # pylint: disable=too-many-branches
-        """Check the configured members of each team, add missing ones and delete unconfigured"""
+    def sync_teams_members(self, dry: bool = False) -> None:  # noqa: C901, PLR0912
+        """Check the configured members of each team, add missing ones and delete unconfigured."""
         logging.debug("Starting to sync team members")
 
         # Gather all ordinary members of the organisation
@@ -664,7 +660,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     def get_and_delete_unconfigured_teams(
         self, dry: bool = False, delete_unconfigured_teams: bool = False
     ) -> None:
-        """Get all teams that are not configured locally and optionally remove them"""
+        """Get all teams that are not configured locally and optionally remove them."""
         # Get all teams that are not configured locally
         for team in self.current_teams:
             if team.name not in self.configured_teams:
@@ -699,15 +695,15 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         self, dry: bool = False, remove_members_without_team: bool = False
     ) -> None:
         """Get all organisation members without any team membership, and
-        optionally remove them"""
+        optionally remove them.
+        """
         # Combine org owners and org members
         all_org_members = set(self.org_members + self.current_org_owners)
 
         # Get all members of all teams
         all_team_members_lst: list[NamedUser] = []
-        for _, team_attrs in self.current_teams.items():
-            for member in team_attrs.get("members", {}):
-                all_team_members_lst.append(member)
+        for team_attrs in self.current_teams.values():
+            all_team_members_lst.extend(team_attrs.get("members", {}))
         # Also add org owners and users that have just been added to a team, and unify them
         all_team_members: set[NamedUser] = set(
             all_team_members_lst + self.newly_added_users + self.current_org_owners
@@ -740,7 +736,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     # Repos
     # --------------------------------------------------------------------------
     def _get_current_repos_and_team_perms(self, ignore_archived: bool) -> None:
-        """Get all repos, their current teams and their permissions"""
+        """Get all repos, their current teams and their permissions."""
         for repo in list(self.org.get_repos()):
             # Check if repo is archived. If so, ignore it, if user requested so
             if ignore_archived and repo.archived:
@@ -758,7 +754,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     def _create_perms_changelist_for_teams(
         self,
     ) -> dict[Team, dict[Repository, str]]:
-        """Create a permission/repo changelist from the perspective of configured teams"""
+        """Create a permission/repo changelist from the perspective of configured teams."""
         team_changelist: dict[Team, dict[Repository, str]] = {}
         for team_name, team_attrs in self.configured_teams.items():
             # Handle unset configured attributes
@@ -796,24 +792,24 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 )
 
             # Get configured repo permissions
-            for repo, perm in team_attrs.get("repos", {}).items():
+            for repo_name, perm in team_attrs.get("repos", {}).items():
                 # Convert repo to Repo object
                 try:
-                    repo = self.org.get_repo(repo)
+                    repo_obj = self.org.get_repo(repo_name)
                 except UnknownObjectException:
                     logging.warning(
                         "Configured repository '%s' for team '%s' has not been "
                         "found in the organisation",
-                        repo,
+                        repo_name,
                         team.name,
                     )
                     continue
 
-                if perm != self.current_repos_teams[repo].get(team):
+                if perm != self.current_repos_teams[repo_obj].get(team):
                     # Add the changeset to the changelist
                     if team not in team_changelist:
                         team_changelist[team] = {}
-                    team_changelist[team][repo] = perm
+                    team_changelist[team][repo_obj] = perm
 
         return team_changelist
 
@@ -821,10 +817,9 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         self, team: Team, team_permission: str, repo_name: str
     ) -> None:
         """Create a record of all members of a team and their permissions on a
-        repo due to being member of an unconfigured team"""
-        users_of_unconfigured_team: dict[NamedUser, str] = self.current_teams[team].get(
-            "members"
-        )  # type: ignore
+        repo due to being member of an unconfigured team.
+        """
+        users_of_unconfigured_team: dict[NamedUser, str] = self.current_teams[team].get("members")  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
         # Initiate this repo in the dict as dict if not present
         if repo_name not in self.unconfigured_team_repo_permissions:
             self.unconfigured_team_repo_permissions[repo_name] = {}
@@ -846,8 +841,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             else:
                 self.unconfigured_team_repo_permissions[repo_name][user.login] = team_permission
 
-    def sync_repo_permissions(self, dry: bool = False, ignore_archived: bool = False) -> None:
-        """Synchronise the repository permissions of all teams"""
+    def sync_repo_permissions(self, dry: bool = False, ignore_archived: bool = False) -> None:  # noqa: C901
+        """Synchronise the repository permissions of all teams."""
         logging.debug("Starting to sync repo/team permissions")
 
         # Get all repos and their current permissions from GitHub
@@ -898,7 +893,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 if self.configured_teams[team.name] is None:
                     remove = True
                 # Handle: Team is configured, contains config
-                elif repos := self.configured_teams[team.name].get("repos", []):  # type: ignore
+                elif repos := self.configured_teams[team.name].get("repos", []):  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
                     # If this repo has not been found in the configured repos
                     # for the team, remove all permissions
                     if repo.name not in repos:
@@ -917,8 +912,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
     # --------------------------------------------------------------------------
     # Collaborators
     # --------------------------------------------------------------------------
-    def _aggregate_lists(self, *lists: list[str | int]) -> list[str | int]:
-        """Combine multiple lists into one while removing duplicates"""
+    def _aggregate_lists(self, *lists: list[str | int] | None) -> list[str | int]:
+        """Combine multiple lists into one while removing duplicates."""
         complete = []
         for single_list in lists:
             if single_list is not None:
@@ -932,7 +927,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         return list(set(complete))
 
     def _get_highest_permission(self, *permissions: str) -> str:
-        """Get the highest GitHub repo permissions out of multiple permissions"""
+        """Get the highest GitHub repo permissions out of multiple permissions."""
         perms_ranking = ["admin", "maintain", "push", "triage", "pull"]
         for perm in perms_ranking:
             # If e.g. "maintain" matches one of the two permissions
@@ -944,20 +939,21 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
     def _get_direct_repo_permissions_of_team(self, team_dict: dict) -> tuple[dict[str, str], str]:
         """Get a list of directly configured repo permissions for a team, and
-        whether the team has a parent"""
-        repo_perms: dict[str, str] = {}
-        # Direct permissions
-        for repo, perm in team_dict.get("repos", {}).items():
-            repo_perms[repo] = perm
+        whether the team has a parent.
+        """
+        repo_perms: dict[str, str] = dict(team_dict.get("repos", {}).items())
 
         # Parent team
         parent = team_dict.get("parent", "")
 
         return repo_perms, parent
 
-    def _get_all_repo_permissions_for_team_and_parents(self, team_name: str, team_dict: dict):
+    def _get_all_repo_permissions_for_team_and_parents(
+        self, team_name: str, team_dict: dict
+    ) -> dict[str, str]:
         """Get a list of all configured repo permissions for a team, also those
-        inherited by parent teams"""
+        inherited by parent teams.
+        """
         all_repo_perms, parent = self._get_direct_repo_permissions_of_team(team_dict=team_dict)
         # If parents have been found, iterate and merge them
         while parent:
@@ -982,14 +978,14 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
         return all_repo_perms
 
-    def _get_configured_repos_and_user_perms(self):
+    def _get_configured_repos_and_user_perms(self) -> None:
         """
         Get a list of repos with a list of individuals and their permissions,
-        based on their team memberships
+        based on their team memberships.
         """
         for team_name, team_attrs in self.configured_teams.items():
             logging.debug("Getting configured repository permissions for team %s", team_name)
-            repo_perms = self._get_all_repo_permissions_for_team_and_parents(team_name, team_attrs)
+            repo_perms = self._get_all_repo_permissions_for_team_and_parents(team_name, team_attrs)  # ty:ignore[invalid-argument-type]
             for repo, perm in repo_perms.items():
                 # Create repo if non-exist
                 if repo not in self.configured_repos_collaborators:
@@ -997,33 +993,35 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
 
                 # Get team maintainers and members
                 team_members = self._aggregate_lists(
-                    team_attrs.get("maintainer", []), team_attrs.get("member", [])
+                    team_attrs.get("maintainer", []),  # ty: ignore[unresolved-attribute]
+                    team_attrs.get("member", []),  # ty: ignore[unresolved-attribute]
                 )
 
                 # Add team member to repo with their repo permissions
                 for team_member in team_members:
                     # Lower-case team member
-                    team_member = team_member.lower()
+                    member_lower = team_member.lower()  # ty:ignore[unresolved-attribute]
                     # Check if permissions already exist
-                    if self.configured_repos_collaborators[repo].get(team_member, {}):
+                    if self.configured_repos_collaborators[repo].get(member_lower, {}):
                         logging.debug(
                             "Permissions for %s on %s already exist: %s. "
                             "Checking whether new permission is higher.",
-                            team_member,
+                            member_lower,
                             repo,
-                            self.configured_repos_collaborators[repo][team_member],
+                            self.configured_repos_collaborators[repo][member_lower],
                         )
-                        self.configured_repos_collaborators[repo][team_member] = (
+                        self.configured_repos_collaborators[repo][member_lower] = (
                             self._get_highest_permission(
-                                perm, self.configured_repos_collaborators[repo][team_member]
+                                perm, self.configured_repos_collaborators[repo][member_lower]
                             )
                         )
                     else:
-                        self.configured_repos_collaborators[repo][team_member] = perm
+                        self.configured_repos_collaborators[repo][member_lower] = perm
 
     def _convert_graphql_perm_to_rest(self, permission: str) -> str:
         """Convert a repo permission coming from the GraphQL API to the ones
-        coming from the REST API"""
+        coming from the REST API.
+        """
         perm_conversion = {
             "none": "",
             "read": "pull",
@@ -1033,15 +1031,14 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             "admin": "admin",
         }
         if permission.lower() in perm_conversion:
-            replacement = perm_conversion.get(permission.lower(), "")
-            return replacement
+            return perm_conversion.get(permission.lower(), "")
 
         return permission
 
     def _fetch_collaborators_of_all_organization_repos(self) -> None:
         """Get all collaborators (individuals) of all repos of a GitHub
-        organization with their permissions using the GraphQL API"""
-
+        organization with their permissions using the GraphQL API.
+        """
         graphql_query = """
             query($owner: String!, $cursor: String) {
                 organization(login: $owner) {
@@ -1084,7 +1081,8 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
             logging.debug("Requesting collaborators for %s", self.org.login)
             org_result = run_graphql_query(graphql_query, variables, self.gh_token)
             more_repos_in_org, variables["cursor"] = self._extract_data_from_graphql_response(
-                graphql_response=org_result, next_page_cursors_for_repos=next_page_cursors_for_repos
+                graphql_response=org_result,  # ty: ignore[invalid-argument-type]
+                next_page_cursors_for_repos=next_page_cursors_for_repos,
             )
 
         # If there are more than 100 collaborators in a repo, we need to fetch
@@ -1094,15 +1092,16 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                 "Not all collaborators of all repos have been fetched. Missing data: %s",
                 next_page_cursors_for_repos,
             )
-            for repo_name, end_cursor in next_page_cursors_for_repos.items():
+            for repo_name, initial_cursor in next_page_cursors_for_repos.items():
                 more_collaborators_in_repo = True
+                cursor = initial_cursor
                 while more_collaborators_in_repo:
                     logging.debug("Requesting additional collaborators for repo %s", repo_name)
                     # Initial query parameters for repo-level request
                     repo_variables = {
                         "owner": self.org.login,
                         "repo": repo_name,
-                        "cursor": end_cursor,
+                        "cursor": cursor,
                     }
                     repo_query = """
                         query($owner: String!, $repo: String!, $cursor: String) {
@@ -1123,12 +1122,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         }
                     """
                     repo_result = run_graphql_query(repo_query, repo_variables, self.gh_token)
-                    more_collaborators_in_repo, end_cursor = (
-                        self._extract_data_from_graphql_response(
-                            graphql_response=repo_result,
-                            next_page_cursors_for_repos=next_page_cursors_for_repos,
-                            single_repo_name=repo_name,
-                        )
+                    more_collaborators_in_repo, cursor = self._extract_data_from_graphql_response(
+                        graphql_response=repo_result,  # ty:ignore[invalid-argument-type]
+                        next_page_cursors_for_repos=next_page_cursors_for_repos,
+                        single_repo_name=repo_name,
                     )
 
         # All collaborators from all repos have been fetched, now populate the
@@ -1189,7 +1186,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                         "Extracting collaborators for %s from GraphQL response", repo_name
                     )
                 except KeyError:
-                    logging.error(
+                    logging.exception(
                         "Did not find a repo name in the GraphQL response "
                         "(organization level) which seems to hint to a bug: %s",
                         repo_edges,
@@ -1241,7 +1238,7 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         return False, ""
 
     def _populate_current_repos_collaborators(self) -> None:
-        """Populate self.current_repos_collaborators with data from repo_collaborators"""
+        """Populate self.current_repos_collaborators with data from repo_collaborators."""
         for repo, collaborators in self.current_repos_collaborators.items():
             if repo.name in self.graphql_repos_collaborators:
                 # Extract each collaborator from the GraphQL response for this repo
@@ -1253,26 +1250,27 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
                     permission = self._convert_graphql_perm_to_rest(collaborator["permission"])
                     collaborators[login.lower()] = permission
 
-    def _get_current_repos_and_user_perms(self):
-        """Get all repos, their current collaborators and their permissions"""
+    def _get_current_repos_and_user_perms(self) -> None:
+        """Get all repos, their current collaborators and their permissions."""
         # We copy the list of repos from self.current_repos_teams
         for repo in self.current_repos_teams:
             self.current_repos_collaborators[repo] = {}
 
         self._fetch_collaborators_of_all_organization_repos()
 
-    def _get_default_repository_permission(self):
+    def _get_default_repository_permission(self) -> None:
         """Get the default repository permission for all users. Convert to
-        admin/maintain/push/triage/pull scheme that the REST API provides"""
+        admin/maintain/push/triage/pull scheme that the REST API provides.
+        """
         self.default_repository_permission = self._convert_graphql_perm_to_rest(
             self.org.default_repository_permission
         )
 
     def _permission1_higher_than_permission2(self, permission1: str, permission2: str) -> bool:
-        """Check whether permission 1 is higher than permission 2"""
+        """Check whether permission 1 is higher than permission 2."""
         perms_ranking = ["admin", "maintain", "push", "triage", "pull", ""]
 
-        def get_rank(permission):
+        def get_rank(permission: str) -> int:
             return perms_ranking.index(permission) if permission in perms_ranking else 99
 
         rank_permission1 = get_rank(permission1)
@@ -1282,9 +1280,10 @@ class GHorg:  # pylint: disable=too-many-instance-attributes, too-many-lines
         # permission2, return True
         return rank_permission1 < rank_permission2
 
-    def sync_repo_collaborator_permissions(self, dry: bool = False):
+    def sync_repo_collaborator_permissions(self, dry: bool = False) -> None:
         """Compare the configured with the current repo permissions for all
-        repositories' collaborators"""
+        repositories' collaborators.
+        """
         # Collect info about all repos, their configured collaborators (through
         # team membership) and the current state (either through team membership
         # or individual).

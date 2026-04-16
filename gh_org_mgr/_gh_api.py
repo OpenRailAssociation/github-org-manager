@@ -2,20 +2,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-Functions for interacting with the GitHub API
-"""
+"""Functions for interacting with the GitHub API."""
 
+import contextlib
 import logging
 import os
 import sys
+from http import HTTPStatus
+from typing import Any
 
 import requests
 
 
 def get_github_secrets_from_env(env_variable: str, secret: str | int) -> str:
-    """Get GitHub secrets from config or environment, while environment overrides"""
-    if env_variable in os.environ and os.environ[env_variable]:
+    """Get GitHub secrets from config or environment, while environment overrides."""
+    if os.environ.get(env_variable):
         logging.debug("GitHub secret taken from environment variable %s", env_variable)
         secret = os.environ[env_variable]
     elif secret:
@@ -25,8 +26,8 @@ def get_github_secrets_from_env(env_variable: str, secret: str | int) -> str:
 
 
 # Function to execute GraphQL query
-def run_graphql_query(query, variables, token):
-    """Run a query against the GitHub GraphQL API"""
+def run_graphql_query(query: str, variables: dict[str, Any], token: str) -> dict | str:
+    """Run a query against the GitHub GraphQL API."""
     headers = {"Authorization": f"Bearer {token}"}
     request = requests.post(
         "https://api.github.com/graphql",
@@ -37,12 +38,10 @@ def run_graphql_query(query, variables, token):
 
     # Get JSON result
     json_return = "No valid JSON return"
-    try:
+    with contextlib.suppress(requests.exceptions.JSONDecodeError):
         json_return = request.json()
-    except requests.exceptions.JSONDecodeError:
-        pass
 
-    if request.status_code == 200:
+    if request.status_code == HTTPStatus.OK:
         return json_return
 
     # Debug information in case of errors

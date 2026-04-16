@@ -4,7 +4,7 @@
 
 [project]
 name = "github-org-manager"
-version = "0.7.6"
+version = "0.7.7"
 description = "Manage a GitHub Organization, its teams, repository permissions, and more"
 authors = [{ name = "Max Mehl", email = "max.mehl@deutschebahn.com" }]
 requires-python = ">=3.10,<4"

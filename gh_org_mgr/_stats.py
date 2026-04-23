@@ -111,7 +111,7 @@ class OrgChanges:
     def update_repo(self, repo_name: str, **changes: bool | str | list[str]) -> None:
         """Update team changes."""
         # Initialise repo if not present
-        if repo_name not in self.teams:
+        if repo_name not in self.repos:
             self.repos[repo_name] = RepoChanges()
 
         implement_changes_into_class(dc_object=self.repos[repo_name], **changes)

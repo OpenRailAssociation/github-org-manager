@@ -16,4 +16,4 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'OpenRailAssociation/github-org-manager'
     steps:
-      - uses: mxmehl/latest-release-vulnerability-status@71769afeefe3a1f2fae289a41b0983961317c557 # v1.2.1
+      - uses: mxmehl/latest-release-vulnerability-status@913ecf07fa07d1278ca711791342c56c3a09fec4 # v1.2.3

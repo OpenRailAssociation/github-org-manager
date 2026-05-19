@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.7.9](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.8...v0.7.9) (2026-05-19)
+
+
+### 📦 CI Improvements
+
+* add zizmor workflow ([#193](https://github.com/OpenRailAssociation/github-org-manager/issues/193)) ([10a6f69](https://github.com/OpenRailAssociation/github-org-manager/commit/10a6f696ec3e47f792f981835ef9590b0bceb7c2))
+* harden release-please app token permissions ([#202](https://github.com/OpenRailAssociation/github-org-manager/issues/202)) ([ab2c476](https://github.com/OpenRailAssociation/github-org-manager/commit/ab2c4760cb039abe3deaf1244896a63635bbf3fe))
+* restrict some workflows to only run upstream ([#194](https://github.com/OpenRailAssociation/github-org-manager/issues/194)) ([51dd294](https://github.com/OpenRailAssociation/github-org-manager/commit/51dd294059b3f24481b0df32bff8d79d0157f838))
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#191](https://github.com/OpenRailAssociation/github-org-manager/issues/191)) ([4274938](https://github.com/OpenRailAssociation/github-org-manager/commit/4274938c6ce6e6cac89c7a00625447b637b50ecb))
+* **deps:** lock file maintenance ([#196](https://github.com/OpenRailAssociation/github-org-manager/issues/196)) ([783d733](https://github.com/OpenRailAssociation/github-org-manager/commit/783d733a3498c2801f8e835af75374b3d85a1e7f))
+* **deps:** lock file maintenance ([#198](https://github.com/OpenRailAssociation/github-org-manager/issues/198)) ([13400f9](https://github.com/OpenRailAssociation/github-org-manager/commit/13400f996f2a3e988e8b692579e97ba216b7d2ed))
+* **deps:** lock file maintenance ([#200](https://github.com/OpenRailAssociation/github-org-manager/issues/200)) ([1cda171](https://github.com/OpenRailAssociation/github-org-manager/commit/1cda171e2dee5bf3981927e1caf177713743f619))
+* **deps:** update actions/create-github-app-token action to v3.2.0 ([#199](https://github.com/OpenRailAssociation/github-org-manager/issues/199)) ([eaae36d](https://github.com/OpenRailAssociation/github-org-manager/commit/eaae36dbc30eb45e8c8daa1dcaace48534257ed4))
+* **deps:** update googleapis/release-please-action action to v5 ([#190](https://github.com/OpenRailAssociation/github-org-manager/issues/190)) ([5604b88](https://github.com/OpenRailAssociation/github-org-manager/commit/5604b881e0514f6238facddc407f542617b19f6c))
+* **deps:** update mxmehl/latest-release-vulnerability-status action to v1.2.3 ([#195](https://github.com/OpenRailAssociation/github-org-manager/issues/195)) ([f2a13a8](https://github.com/OpenRailAssociation/github-org-manager/commit/f2a13a8bf37708494383c2d637bdbb5e983ac289))
+* **deps:** update mxmehl/latest-release-vulnerability-status action to v1.2.4 ([#197](https://github.com/OpenRailAssociation/github-org-manager/issues/197)) ([1399f43](https://github.com/OpenRailAssociation/github-org-manager/commit/1399f430355d1a87a1b33a31233c6255b110b3c7))
+* **deps:** update zizmorcore/zizmor-action action to v0.5.5 ([#201](https://github.com/OpenRailAssociation/github-org-manager/issues/201)) ([c1d1d8c](https://github.com/OpenRailAssociation/github-org-manager/commit/c1d1d8ce30458368d8760e47e9ea35b1fbe40254))
+
 ## [0.7.8](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.7...v0.7.8) (2026-04-23)
 
 

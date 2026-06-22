@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.11](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.10...v0.7.11) (2026-06-22)
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#208](https://github.com/OpenRailAssociation/github-org-manager/issues/208)) ([2a956c0](https://github.com/OpenRailAssociation/github-org-manager/commit/2a956c0f92a6adcf49a043ec1d373ec67f34be55))
+* **deps:** lock file maintenance ([#211](https://github.com/OpenRailAssociation/github-org-manager/issues/211)) ([a752537](https://github.com/OpenRailAssociation/github-org-manager/commit/a752537f7497c32323efe072786e2d0a8b2fe4d5))
+* **deps:** update github actions group to v7 ([#210](https://github.com/OpenRailAssociation/github-org-manager/issues/210)) ([747e751](https://github.com/OpenRailAssociation/github-org-manager/commit/747e751c070fbe218f8d2f0f471acec4f13d4f47))
+
 ## [0.7.10](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.9...v0.7.10) (2026-06-08)
 
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.12](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.11...v0.7.12) (2026-06-29)
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#215](https://github.com/OpenRailAssociation/github-org-manager/issues/215)) ([8bae538](https://github.com/OpenRailAssociation/github-org-manager/commit/8bae5389233583ebfefd8def95a35e32dc0c15a3))
+* **deps:** update actions/setup-python action to v6.3.0 ([#214](https://github.com/OpenRailAssociation/github-org-manager/issues/214)) ([c32c5ee](https://github.com/OpenRailAssociation/github-org-manager/commit/c32c5ee61f58a8f9689a468851ae646bd5c0e38e))
+* **deps:** update github actions group ([#212](https://github.com/OpenRailAssociation/github-org-manager/issues/212)) ([0f628ba](https://github.com/OpenRailAssociation/github-org-manager/commit/0f628ba5cba973d618e6749fc212e42c40b8dff0))
+
 ## [0.7.11](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.10...v0.7.11) (2026-06-22)
 
 

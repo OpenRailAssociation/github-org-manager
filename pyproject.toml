@@ -10,6 +10,7 @@ authors = [{ name = "Max Mehl", email = "max.mehl@deutschebahn.com" }]
 requires-python = ">=3.10,<4"
 readme = "README.md"
 license = "Apache-2.0"
+license-files = ["LICENSE", "LICENSES/*"]
 keywords = [
     "github",
     "github-management",
@@ -40,6 +41,7 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/OpenRailAssociation/github-org-manager"
+Changelog = "https://github.com/OpenRailAssociation/github-org-manager/blob/main/CHANGELOG.md"
 
 [project.scripts]
 gh-org-mgr = "gh_org_mgr.manage:main"

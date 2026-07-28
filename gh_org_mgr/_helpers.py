@@ -97,7 +97,7 @@ def compare_two_dicts(dict1: dict, dict2: dict) -> dict[str, dict[str, str | int
     return differences
 
 
-def dict_to_pretty_string(dictionary: dict, sensible_keys: None | list[str] = None) -> str:
+def dict_to_pretty_string(dictionary: dict, sensible_keys: list[str] | None = None) -> str:
     """Convert a dict to a pretty-printed output."""
 
     # Censor sensible fields

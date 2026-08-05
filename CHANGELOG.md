@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.7.12](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.11...v0.7.12) (2026-08-05)
+
+
+### ⚙️ Chores
+
+* add license-files, repository URL, and changelog URL to pyproject.toml ([#221](https://github.com/OpenRailAssociation/github-org-manager/issues/221)) ([2a3ef38](https://github.com/OpenRailAssociation/github-org-manager/commit/2a3ef38e40d5726ec53323c094098c573371dd32))
+* **deps:** lock file maintenance ([#215](https://github.com/OpenRailAssociation/github-org-manager/issues/215)) ([8bae538](https://github.com/OpenRailAssociation/github-org-manager/commit/8bae5389233583ebfefd8def95a35e32dc0c15a3))
+* **deps:** lock file maintenance ([#216](https://github.com/OpenRailAssociation/github-org-manager/issues/216)) ([4a14d44](https://github.com/OpenRailAssociation/github-org-manager/commit/4a14d443004266c66c7ef671361487947426344f))
+* **deps:** lock file maintenance ([#220](https://github.com/OpenRailAssociation/github-org-manager/issues/220)) ([86e98a5](https://github.com/OpenRailAssociation/github-org-manager/commit/86e98a533ea810ba508b2b70d349ac117c8419f1))
+* **deps:** lock file maintenance ([#228](https://github.com/OpenRailAssociation/github-org-manager/issues/228)) ([b059f5d](https://github.com/OpenRailAssociation/github-org-manager/commit/b059f5d298b3d19e244db02d6711f464e30c9252))
+* **deps:** lock file maintenance ([#232](https://github.com/OpenRailAssociation/github-org-manager/issues/232)) ([2281dd1](https://github.com/OpenRailAssociation/github-org-manager/commit/2281dd19eec53cf0222729b24b1b88eb6035ce41))
+* **deps:** update actions/checkout action to v7.0.1 ([#225](https://github.com/OpenRailAssociation/github-org-manager/issues/225)) ([031756e](https://github.com/OpenRailAssociation/github-org-manager/commit/031756e9c7e165005209ebf37df9d148e9e825ef))
+* **deps:** update actions/setup-python action to v6.3.0 ([#214](https://github.com/OpenRailAssociation/github-org-manager/issues/214)) ([c32c5ee](https://github.com/OpenRailAssociation/github-org-manager/commit/c32c5ee61f58a8f9689a468851ae646bd5c0e38e))
+* **deps:** update actions/setup-python action to v7 ([#224](https://github.com/OpenRailAssociation/github-org-manager/issues/224)) ([4c8c5e5](https://github.com/OpenRailAssociation/github-org-manager/commit/4c8c5e5386337dc6334c40b960b2506955190bb6))
+* **deps:** update astral-sh/setup-uv action to v8.3.0 ([#217](https://github.com/OpenRailAssociation/github-org-manager/issues/217)) ([2a341f0](https://github.com/OpenRailAssociation/github-org-manager/commit/2a341f04edb5878e6ca5c3a8b16c9a7286d06132))
+* **deps:** update astral-sh/setup-uv action to v8.3.1 ([#218](https://github.com/OpenRailAssociation/github-org-manager/issues/218)) ([0024dc4](https://github.com/OpenRailAssociation/github-org-manager/commit/0024dc4a58189bca5182222b29460d7ddd688e9a))
+* **deps:** update astral-sh/setup-uv action to v8.3.2 ([#219](https://github.com/OpenRailAssociation/github-org-manager/issues/219)) ([9738733](https://github.com/OpenRailAssociation/github-org-manager/commit/9738733aa7a062156e1e50c70948dfa9b65c3883))
+* **deps:** update astral-sh/setup-uv action to v9 ([#226](https://github.com/OpenRailAssociation/github-org-manager/issues/226)) ([f623f10](https://github.com/OpenRailAssociation/github-org-manager/commit/f623f10d78b685b06e45c95afe88fd39c9450076))
+* **deps:** update dependency uv_build to &gt;=0.12.0,&lt;0.13.0 ([#230](https://github.com/OpenRailAssociation/github-org-manager/issues/230)) ([804ddd6](https://github.com/OpenRailAssociation/github-org-manager/commit/804ddd62e1fe257906a5ec5aef0a704a4c1dcb2d))
+* **deps:** update github actions group ([#212](https://github.com/OpenRailAssociation/github-org-manager/issues/212)) ([0f628ba](https://github.com/OpenRailAssociation/github-org-manager/commit/0f628ba5cba973d618e6749fc212e42c40b8dff0))
+* **deps:** update mxmehl/latest-release-vulnerability-status action to v1.3.0 ([#233](https://github.com/OpenRailAssociation/github-org-manager/issues/233)) ([b4cf781](https://github.com/OpenRailAssociation/github-org-manager/commit/b4cf78118fa3da1237f98e7ccd02066f37bd52ff))
+* **deps:** update pypa/gh-action-pypi-publish action to v1.14.1 ([#223](https://github.com/OpenRailAssociation/github-org-manager/issues/223)) ([e07648f](https://github.com/OpenRailAssociation/github-org-manager/commit/e07648fa23803244839a688009144e5aa0b235e9))
+* **deps:** update pypa/gh-action-pypi-publish action to v1.14.2 ([#231](https://github.com/OpenRailAssociation/github-org-manager/issues/231)) ([6202489](https://github.com/OpenRailAssociation/github-org-manager/commit/62024896674a35808522869be10784aa59abf388))
+* **deps:** update zizmorcore/zizmor-action action to v0.6.0 ([#222](https://github.com/OpenRailAssociation/github-org-manager/issues/222)) ([a4cd210](https://github.com/OpenRailAssociation/github-org-manager/commit/a4cd210803d6e79099a9b677881c5459af524ace))
+* **deps:** update zizmorcore/zizmor-action action to v0.6.1 ([#227](https://github.com/OpenRailAssociation/github-org-manager/issues/227)) ([223b253](https://github.com/OpenRailAssociation/github-org-manager/commit/223b253508b5773be40f17d9dd9d48d497f0c8ba))
+* **deps:** update zizmorcore/zizmor-action action to v0.6.2 ([#237](https://github.com/OpenRailAssociation/github-org-manager/issues/237)) ([c32fa86](https://github.com/OpenRailAssociation/github-org-manager/commit/c32fa8693629e86e430fd14183eebe76b7ba201a))
+* disable unnecessary ruff check ([#229](https://github.com/OpenRailAssociation/github-org-manager/issues/229)) ([6e16047](https://github.com/OpenRailAssociation/github-org-manager/commit/6e16047f1df46dd803787d664febcb19b560d733))
+
 ## [0.7.11](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.10...v0.7.11) (2026-06-22)
 
 

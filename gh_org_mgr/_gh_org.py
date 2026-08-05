@@ -512,14 +512,22 @@ class GHorg:
         return []
 
     def _get_current_team_members(self, team: Team) -> dict[NamedUser, str]:
-        """Return dict of current users with their respective roles. Also
-        contains members of child teams.
+        """Return dict of current users with their respective roles. Only
+        contains direct members of the team, not members of child teams.
         """
         current_users: dict[NamedUser, str] = {}
         for role in ("member", "maintainer"):
-            # Make a two-step check whether person is actually in team, as
-            # get_members() also return child-team members
+            # Check whether person is actually direct member of team, as
+            # get_members() also returns child-team members, marked via the
+            # "inherited" flag in the API response
             for user in list(team.get_members(role=role)):
+                if user.raw_data.get("inherited"):
+                    logging.debug(
+                        "User '%s' is only member of a child team of '%s', ignoring",
+                        user.login,
+                        team.name,
+                    )
+                    continue
                 current_users.update({user: role})
 
         return current_users

@@ -7,6 +7,7 @@
 import logging
 import sys
 from dataclasses import asdict, dataclass, field
+from http import HTTPStatus
 
 from github import Auth, Github, GithubIntegration
 from github.GithubException import (
@@ -21,7 +22,7 @@ from github.Requester import Requester
 from github.Team import Team
 from jwt.exceptions import InvalidKeyError
 
-from ._gh_api import get_github_secrets_from_env, run_graphql_query
+from ._gh_api import get_github_secrets_from_env, run_graphql_query, run_rest_api_request
 from ._helpers import (
     compare_two_dicts,
     compare_two_lists,
@@ -47,6 +48,8 @@ class GHorg:
     current_teams: dict[Team, dict] = field(default_factory=dict)
     current_teams_str: list[str] = field(default_factory=list)
     configured_teams: dict[str, dict | None] = field(default_factory=dict)
+    org_roles: dict[str, int] = field(default_factory=dict)
+    team_slugs: dict[str, str] = field(default_factory=dict)
     newly_added_users: list[NamedUser] = field(default_factory=list)
     current_repos_teams: dict[Repository, dict[Team, str]] = field(default_factory=dict)
     graphql_repos_collaborators: dict[str, list[dict]] = field(default_factory=dict)
@@ -731,6 +734,155 @@ class GHorg:
                 )
                 for user in members_without_team:
                     self.stats.remove_member_without_team(user=user.login, removed=False)
+
+    # --------------------------------------------------------------------------
+    # Organisation roles
+    # --------------------------------------------------------------------------
+    def _org_roles_api_request(self, method: str, path: str = "") -> dict | list:
+        """Run a request against the organisation roles API and return the JSON
+        response. Exits the program if the request fails.
+        """
+        url = f"{self.org.url}/organization-roles{path}"
+        status, response = run_rest_api_request(method, url, self.gh_token)
+        if status in (HTTPStatus.OK, HTTPStatus.NO_CONTENT):
+            return response if response is not None else {}
+
+        logging.critical(
+            "Request to the organisation roles API failed: %s %s (HTTP status %s). "
+            "Does your token have permission to read/manage organisation roles? Response: %s",
+            method,
+            url,
+            status,
+            response,
+        )
+        sys.exit(1)
+
+    def _get_current_org_roles(self) -> None:
+        """Get all organisation roles of the organisation as a name-to-ID dict."""
+        response = self._org_roles_api_request("GET", "?per_page=100")
+        if not isinstance(response, dict):
+            logging.critical("Unexpected organisation roles response: %s", response)
+            sys.exit(1)
+        self.org_roles = {role["name"]: role["id"] for role in response["roles"]}
+        logging.debug("Found %s organisation roles: %s", len(self.org_roles), self.org_roles)
+
+    def _get_current_teams_org_roles(self) -> dict[str, set[str]]:
+        """Get the current organisation roles of all teams. As the API only
+        allows querying the teams per role, iterate over all roles and invert
+        the result into a dict of team slug to set of role names.
+        """
+        teams_roles: dict[str, set[str]] = {}
+        for role_name, role_id in self.org_roles.items():
+            response = self._org_roles_api_request("GET", f"/{role_id}/teams?per_page=100")
+            if not isinstance(response, list):
+                logging.critical("Unexpected organisation role teams response: %s", response)
+                sys.exit(1)
+            for team in response:
+                teams_roles.setdefault(team["slug"], set()).add(role_name)
+
+        return teams_roles
+
+    def validate_configured_team_roles(self) -> None:
+        """Check that all configured team roles exist in the organisation.
+        Fail fast before any write operations happen.
+        """
+        # Collect all configured roles. If none are configured, skip validation
+        configured_roles: dict[str, list[str]] = {}
+        for team_name, team_config in self.configured_teams.items():
+            if team_config and (roles := team_config.get("roles")):
+                configured_roles[team_name] = list(roles)
+        if not configured_roles:
+            logging.debug("No organisation roles configured for any team. Skipping validation")
+            return
+
+        self._get_current_org_roles()
+
+        # Find all configured roles that do not exist in the organisation
+        invalid_roles: list[str] = [
+            f"Team '{team_name}': role '{role}'"
+            for team_name, roles in configured_roles.items()
+            for role in roles
+            if role not in self.org_roles
+        ]
+
+        if invalid_roles:
+            logging.critical(
+                "The following configured organisation roles do not exist in the "
+                "organisation '%s'. Cannot continue:\n%s",
+                self.org.login,
+                "\n".join(f"- {item}" for item in invalid_roles),
+            )
+            sys.exit(1)
+
+    def _get_team_slug(self, team_name: str) -> str | None:
+        """Get the slug of a team from the GitHub API. The name-to-slug mapping
+        is fetched once and cached. Never derive the slug from the team name.
+        Returns None if the team does not exist.
+        """
+        if not self.team_slugs:
+            # Reuse the team objects if they have been fetched already,
+            # otherwise get them from the API
+            if self.current_teams:
+                self.team_slugs = {team.name: team.slug for team in self.current_teams}
+            else:
+                for team in self.org.get_teams():
+                    self.team_slugs[team.name] = team.slug
+
+        return self.team_slugs.get(team_name)
+
+    def sync_org_roles(self, dry: bool = False) -> None:
+        """Synchronise the organisation roles of all teams.
+        """
+        # Ensure we know the role IDs of the organisation
+        if not self.org_roles:
+            self._get_current_org_roles()
+
+        # Get the current organisation roles of all teams. Needs one API
+        # request per organisation role
+        current_teams_roles = self._get_current_teams_org_roles()
+
+        for team_name, team_config in self.configured_teams.items():
+            configured_roles = set((team_config or {}).get("roles") or [])
+
+            # Get the team's slug from the API. If the team does not exist,
+            # fail fast in a real run; in a dry-run it may still be created
+            team_slug = self._get_team_slug(team_name)
+            if team_slug is None:
+                if not dry:
+                    logging.critical(
+                        "The team '%s' does not exist in the organisation '%s'. Cannot continue.",
+                        team_name,
+                        self.org.login,
+                    )
+                    sys.exit(1)
+                logging.info(
+                    "Team '%s' does not exist yet, probably because it should be created "
+                    "but this is a dry-run. Treating its current organisation roles as empty",
+                    team_name,
+                )
+                current_roles: set[str] = set()
+            else:
+                current_roles = current_teams_roles.get(team_slug, set())
+
+            if configured_roles == current_roles:
+                logging.info("Organisation roles of team '%s' are in sync, no changes", team_name)
+                continue
+
+            # Assign missing roles to the team
+            for role in configured_roles - current_roles:
+                logging.info("Assigning organisation role '%s' to team '%s'", role, team_name)
+                self.stats.add_org_role_to_team(team=team_name, role=role)
+                if not dry:
+                    self._org_roles_api_request("PUT", f"/teams/{team_slug}/{self.org_roles[role]}")
+
+            # Remove unconfigured roles from the team
+            for role in current_roles - configured_roles:
+                logging.info("Removing organisation role '%s' from team '%s'", role, team_name)
+                self.stats.remove_org_role_from_team(team=team_name, role=role)
+                if not dry:
+                    self._org_roles_api_request(
+                        "DELETE", f"/teams/{team_slug}/{self.org_roles[role]}"
+                    )
 
     # --------------------------------------------------------------------------
     # Repos

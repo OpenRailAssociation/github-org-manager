@@ -14,6 +14,7 @@ TEAM_TEMPLATE = """
 ${team_name}:
   # parent:
   # repos:
+  # roles:
   # maintainer:
   member:
 """

@@ -140,6 +140,56 @@ class GHorg:
 
         return gh_user
 
+    def validate_configured_usernames(self) -> None:
+        """Resolve all configured usernames and verify they still match, before
+        any write operation is executed. Abort with an error if any configured
+        user has been renamed or does not exist anymore, so no write operation
+        can ever touch the wrong account.
+        """
+        configured_users: set[str] = set()
+
+        # Collect configured org owners, if they are a proper list
+        if isinstance(self.configured_org_owners, list):
+            configured_users.update(self.configured_org_owners)
+
+        # Collect configured team members and maintainers
+        for team_attrs in self.configured_teams.values():
+            if not isinstance(team_attrs, dict):
+                continue
+            for role in ("member", "maintainer"):
+                if users := team_attrs.get(role):
+                    configured_users.update(users)
+
+        # Resolve each configured user and verify their current login name
+        invalid_users: list[str] = []
+        for username in configured_users:
+            try:
+                gh_user: NamedUser = self.gh.get_user(username)
+            except UnknownObjectException:
+                logging.exception(
+                    "The configured user '%s' does not exist on GitHub.",
+                    username,
+                )
+                invalid_users.append(username)
+                continue
+
+            if gh_user.login != username:
+                logging.error(
+                    "The configured user '%s' has been renamed to '%s'.",
+                    username,
+                    gh_user.login,
+                )
+                invalid_users.append(username)
+
+        # Any invalid user is a hard error: abort before any write operation
+        if invalid_users:
+            logging.critical(
+                "The following configured usernames do not match their GitHub accounts: %s. "
+                "For security reasons, please update your configuration. Aborting without making any changes.",
+                ", ".join(sorted(invalid_users)),
+            )
+            sys.exit(1)
+
     # --------------------------------------------------------------------------
     # Configuration
     # --------------------------------------------------------------------------

@@ -14,6 +14,7 @@ from github.GithubException import (
     GithubException,
     UnknownObjectException,
 )
+from github.AuthenticatedUser import AuthenticatedUser
 from github.NamedUser import NamedUser
 from github.Organization import Organization
 from github.Repository import Repository
@@ -164,7 +165,7 @@ class GHorg:
         invalid_users: list[str] = []
         for username in configured_users:
             try:
-                gh_user: NamedUser = self.gh.get_user(username)
+                gh_user: NamedUser | AuthenticatedUser = self.gh.get_user(username)
             except UnknownObjectException:
                 logging.exception(
                     "The configured user '%s' does not exist on GitHub.",

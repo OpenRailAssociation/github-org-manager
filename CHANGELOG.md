@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.13](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.12...v0.7.13) (2026-09-02)
+
+
+### 🔥 Bug Fixes
+
+* skip null collaborator entries in GraphQL response ([#246](https://github.com/OpenRailAssociation/github-org-manager/issues/246)) ([d8731f7](https://github.com/OpenRailAssociation/github-org-manager/commit/d8731f7db7b63570e427a338095621fcb019e882))
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#243](https://github.com/OpenRailAssociation/github-org-manager/issues/243)) ([257b276](https://github.com/OpenRailAssociation/github-org-manager/commit/257b276c600da5e0c24e8af6b0a20fafdeeabaeb))
+* **deps:** lock file maintenance ([#245](https://github.com/OpenRailAssociation/github-org-manager/issues/245)) ([1bcc74b](https://github.com/OpenRailAssociation/github-org-manager/commit/1bcc74bd71db33a0fb71f6ea363a0e120f5fd0c1))
+* **deps:** update astral-sh/setup-uv action to v10 ([#242](https://github.com/OpenRailAssociation/github-org-manager/issues/242)) ([ad5ce4f](https://github.com/OpenRailAssociation/github-org-manager/commit/ad5ce4f009ea14392ca5bdf52a32b1380fd98630))
+
 ## [0.7.12](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.11...v0.7.12) (2026-08-10)
 
 

@@ -128,7 +128,7 @@ class GHorg:
     def _resolve_gh_username(self, username: str, teamname: str) -> NamedUser | None:
         """Turn a username into a proper GitHub user object."""
         try:
-            gh_user: NamedUser = self.gh.get_user(username)  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
+            gh_user: NamedUser = self.gh.get_user(username)
         except UnknownObjectException:
             logging.exception(
                 "The user '%s' configured as member of team '%s' does not "
@@ -304,7 +304,7 @@ class GHorg:
 
         # First, check whether all configured parent teams exist or will be created
         for team, attributes in self.configured_teams.items():
-            if parent := attributes.get("parent"):  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
+            if parent := attributes.get("parent"):  # ty:ignore[unresolved-attribute]
                 if parent not in self.configured_teams:
                     if parent not in self.current_teams_str:
                         logging.critical(
@@ -338,7 +338,7 @@ class GHorg:
                 if team in ordered_teams:
                     continue
                 # Team has parent, but parent not ordered yet
-                if (parent := attributes.get("parent")) and parent not in ordered_teams:  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
+                if (parent := attributes.get("parent")) and parent not in ordered_teams:  # ty:ignore[unresolved-attribute]
                     continue
                 # Team has no parent, or parent already ordered
                 ordered_teams[team] = attributes
@@ -350,7 +350,7 @@ class GHorg:
         for team, attributes in self.configured_teams.items():
             if team not in self.current_teams_str:
                 # If a parent team is configured, try to get its ID
-                if parent := attributes.get("parent"):  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
+                if parent := attributes.get("parent"):  # ty:ignore[unresolved-attribute]
                     try:
                         parent_id = self.org.get_team_by_slug(sluggify_teamname(parent)).id
                     except UnknownObjectException:
@@ -436,13 +436,13 @@ class GHorg:
             # Use dictionary comprehensions to build the dictionaries with the
             # relevant team settings for comparison
             configured_team_configs = {
-                key: self.configured_teams[team.name].get(key)  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
+                key: self.configured_teams[team.name].get(key)  # ty:ignore[unresolved-attribute]
                 for key in self.TEAM_CONFIG_FIELDS
                 # Only add keys that are actually in the configuration. Deals
                 # with settings that should be changed, as they are neither
                 # defined in the default or team config, and marked as
                 # <keep-current>
-                if key in self.configured_teams[team.name]  # type: ignore[operator]  # ty:ignore[unsupported-operator]
+                if key in self.configured_teams[team.name]  # ty:ignore[unsupported-operator]
             }
             current_team_configs = {
                 key: getattr(team, key)
@@ -450,7 +450,7 @@ class GHorg:
                 # Only compare current team settings with keys that are defined
                 # as the configured team settings. Taking out settings that
                 # shall not be changed
-                if key in self.configured_teams[team.name]  # type: ignore[operator]  # ty:ignore[unsupported-operator]
+                if key in self.configured_teams[team.name]  # ty:ignore[unsupported-operator]
             }
 
             # Resolve parent team id from parent Team object or team string, and sort
@@ -480,7 +480,7 @@ class GHorg:
                 # Execute team setting changes
                 if not dry:
                     try:
-                        team.edit(name=team.name, **configured_team_configs)  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+                        team.edit(name=team.name, **configured_team_configs)  # ty:ignore[invalid-argument-type]
                     except GithubException as exc:
                         logging.critical(
                             "Team '%s' settings could not be edited. Error: \n%s",
@@ -819,7 +819,7 @@ class GHorg:
         """Create a record of all members of a team and their permissions on a
         repo due to being member of an unconfigured team.
         """
-        users_of_unconfigured_team: dict[NamedUser, str] = self.current_teams[team].get("members")  # type: ignore[assignment]  # ty:ignore[invalid-assignment]
+        users_of_unconfigured_team: dict[NamedUser, str] = self.current_teams[team].get("members")  # ty:ignore[invalid-assignment]
         # Initiate this repo in the dict as dict if not present
         if repo_name not in self.unconfigured_team_repo_permissions:
             self.unconfigured_team_repo_permissions[repo_name] = {}
@@ -893,7 +893,7 @@ class GHorg:
                 if self.configured_teams[team.name] is None:
                     remove = True
                 # Handle: Team is configured, contains config
-                elif repos := self.configured_teams[team.name].get("repos", []):  # type: ignore[union-attr]  # ty:ignore[unresolved-attribute]
+                elif repos := self.configured_teams[team.name].get("repos", []):  # ty:ignore[unresolved-attribute]
                     # If this repo has not been found in the configured repos
                     # for the team, remove all permissions
                     if repo.name not in repos:

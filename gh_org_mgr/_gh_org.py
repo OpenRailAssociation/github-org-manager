@@ -1243,6 +1243,13 @@ class GHorg:
             if repo.name in self.graphql_repos_collaborators:
                 # Extract each collaborator from the GraphQL response for this repo
                 for collaborator in self.graphql_repos_collaborators[repo.name]:
+                    if collaborator is None or collaborator.get("node") is None:
+                        logging.debug(
+                            "Skipping collaborator entry with missing data in repo %s: %s",
+                            repo.name,
+                            collaborator,
+                        )
+                        continue
                     login: str = collaborator["node"]["login"]
                     # Skip entry if collaborator is org owner, which is "admin" anyway
                     if login.lower() in [user.login.lower() for user in self.current_org_owners]:

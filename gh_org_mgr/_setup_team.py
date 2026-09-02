@@ -90,7 +90,7 @@ def setup_team(
     # Come up with file name based on team name in the given config directory
     if not file_path:
         # Combine config dir and file name
-        file_path = str(Path(config_path) / "teams" / (slugify(team_name) + ".yaml"))  # type: ignore[arg-type]  # ty:ignore[invalid-argument-type]
+        file_path = str(Path(config_path) / "teams" / (slugify(team_name) + ".yaml"))  # ty:ignore[invalid-argument-type]
         logging.debug("Derived file path: %s", file_path)
 
     # Fill template

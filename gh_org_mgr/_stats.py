@@ -22,6 +22,8 @@ class TeamChanges:
     changed_members_role: list[str] = field(default_factory=list)
     removed_members: list[str] = field(default_factory=list)
     pending_members: list[str] = field(default_factory=list)
+    added_org_roles: list[str] = field(default_factory=list)
+    removed_org_roles: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -104,6 +106,17 @@ class OrgChanges:
         self.members_without_team.append(user)
         if removed:
             self.removed_members.append(user)
+
+    # --------------------------------------------------------------------------
+    # Organisation roles
+    # --------------------------------------------------------------------------
+    def add_org_role_to_team(self, team: str, role: str) -> None:
+        """Organisation role has been assigned to a team."""
+        self.update_team(team_name=team, added_org_roles=role)
+
+    def remove_org_role_from_team(self, team: str, role: str) -> None:
+        """Organisation role has been removed from a team."""
+        self.update_team(team_name=team, removed_org_roles=role)
 
     # --------------------------------------------------------------------------
     # Repos
@@ -232,6 +245,14 @@ class OrgChanges:
                     if tchanges.pending_members:
                         output += "    ⏳ Pending members:\n"
                         for item in tchanges.pending_members:
+                            output += f"      - {item}\n"
+                    if tchanges.added_org_roles:
+                        output += "    🎭 Added organisation roles:\n"
+                        for item in tchanges.added_org_roles:
+                            output += f"      - {item}\n"
+                    if tchanges.removed_org_roles:
+                        output += "    🎭 Removed organisation roles:\n"
+                        for item in tchanges.removed_org_roles:
                             output += f"      - {item}\n"
             if self.repos:
                 output += "\n📂 Repository Changes:\n"

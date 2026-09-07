@@ -27,6 +27,13 @@ Project Maintainers:
   # Make this a child team of the provided parent. Note: You should first
   # describe parents in this file, then children
   parent: Maintainers
+  # Organisation roles that shall be assigned to this team. Any other
+  # organisation roles of the team are removed. Predefined roles are:
+  # all_repo_read, all_repo_triage, all_repo_write, all_repo_maintain,
+  # all_repo_admin, app_manager, ci_cd_admin, security_manager,
+  # open_source_license_manager
+  roles:
+    - app_manager
   member:
     - octocat
   repos:

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.14](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.13...v0.7.14) (2026-09-12)
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#250](https://github.com/OpenRailAssociation/github-org-manager/issues/250)) ([0ba785a](https://github.com/OpenRailAssociation/github-org-manager/commit/0ba785a9d3fb04d93cec597606da0a2605fba2d4))
+* **deps:** update zizmorcore/zizmor-action action to v0.6.3 ([#248](https://github.com/OpenRailAssociation/github-org-manager/issues/248)) ([7051a03](https://github.com/OpenRailAssociation/github-org-manager/commit/7051a03614af0157f41f649f3645939778c830d5))
+* **deps:** update zizmorcore/zizmor-action action to v0.6.4 ([#252](https://github.com/OpenRailAssociation/github-org-manager/issues/252)) ([5c5a09d](https://github.com/OpenRailAssociation/github-org-manager/commit/5c5a09daed06301a1bba20d5ce98fa29fc8b0aed))
+
 ## [0.7.13](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.12...v0.7.13) (2026-09-02)
 
 

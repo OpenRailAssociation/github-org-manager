@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.14](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.13...v0.7.14) (2026-09-16)
+
+
+### 🔥 Bug Fixes
+
+* correctly handle team members even if they are child team members ([#238](https://github.com/OpenRailAssociation/github-org-manager/issues/238)) ([8932e38](https://github.com/OpenRailAssociation/github-org-manager/commit/8932e389fc59f34f78eba5230c7498018851ce38))
+* **deps:** update dependency python-slugify to v9 ([#251](https://github.com/OpenRailAssociation/github-org-manager/issues/251)) ([a15f5dc](https://github.com/OpenRailAssociation/github-org-manager/commit/a15f5dc3f1e7945e62a7b45e61eb029fbf926d21))
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#250](https://github.com/OpenRailAssociation/github-org-manager/issues/250)) ([0ba785a](https://github.com/OpenRailAssociation/github-org-manager/commit/0ba785a9d3fb04d93cec597606da0a2605fba2d4))
+* **deps:** lock file maintenance ([#254](https://github.com/OpenRailAssociation/github-org-manager/issues/254)) ([f15204a](https://github.com/OpenRailAssociation/github-org-manager/commit/f15204a18daf9946b63e5589e3ba28cf5cf93cad))
+* **deps:** update astral-sh/setup-uv action to v10.1.0 ([#253](https://github.com/OpenRailAssociation/github-org-manager/issues/253)) ([baa4d15](https://github.com/OpenRailAssociation/github-org-manager/commit/baa4d1561ececfa9e75bbf264cbf4e551d43c91f))
+* **deps:** update zizmorcore/zizmor-action action to v0.6.3 ([#248](https://github.com/OpenRailAssociation/github-org-manager/issues/248)) ([7051a03](https://github.com/OpenRailAssociation/github-org-manager/commit/7051a03614af0157f41f649f3645939778c830d5))
+* **deps:** update zizmorcore/zizmor-action action to v0.6.4 ([#252](https://github.com/OpenRailAssociation/github-org-manager/issues/252)) ([5c5a09d](https://github.com/OpenRailAssociation/github-org-manager/commit/5c5a09daed06301a1bba20d5ce98fa29fc8b0aed))
+
 ## [0.7.13](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.12...v0.7.13) (2026-09-02)
 
 

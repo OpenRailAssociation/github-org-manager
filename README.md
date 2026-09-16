@@ -20,6 +20,7 @@ The basic principle: all settings reside in YAML configuration files which will 
 * Manage GitHub organization owners
 * Manage GitHub teams, their members, maintainers and settings
 * Support of parent/child teams
+* Assign GitHub organization roles to teams, e.g. `app_manager`
 * Manage teams' permissions on organizations' repositories
 * Invite members to the organization if they aren't part of it yet
 * Warn about unmanaged teams
@@ -64,6 +65,7 @@ Access tokens and apps need the following permissions:
   * Metadata: read
 * Organization permissions:
   * Administration: read and write
+  * Custom organization roles: read
   * Members: read and write
 
 You can set the required secrets in `config/app.yaml` or via environment variables (`GITHUB_TOKEN` or `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY`).

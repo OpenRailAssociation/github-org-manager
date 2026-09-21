@@ -521,7 +521,7 @@ class GHorg:
             # get_members() also returns child-team members, marked via the
             # "inherited" flag in the API response
             for user in list(team.get_members(role=role)):
-                if user._rawData.get("inherited"):
+                if user._rawData.get("inherited"):  # noqa: SLF001
                     logging.debug(
                         "User '%s' is only member of a child team of '%s', ignoring",
                         user.login,

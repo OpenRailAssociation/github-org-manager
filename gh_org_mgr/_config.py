@@ -82,6 +82,9 @@ TEAM_CONFIG_SCHEMA = {
                     "oneOf": [{"type": "null"}, {"type": "array", "items": {"type": "string"}}]
                 },
                 "parent": {"type": "string"},
+                "roles": {
+                    "oneOf": [{"type": "null"}, {"type": "array", "items": {"type": "string"}}]
+                },
                 "repos": {
                     "type": "object",
                     "propertyNames": {"type": "string"},

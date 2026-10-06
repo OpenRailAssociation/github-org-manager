@@ -130,6 +130,11 @@ def main() -> None:
         # Get current rate limit
         org.ratelimit()
 
+        # Validate all configured usernames before any write operation, and
+        # abort if any renamed or vanished user is found
+        log_progress("Validating configured usernames...")
+        org.validate_configured_usernames()
+
         # Synchronise organisation owners
         log_progress("Synchronising organisation owners...")
         org.sync_org_owners(dry=args.dry, force=args.force)

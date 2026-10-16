@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.15](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.14...v0.7.15) (2026-10-16)
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#260](https://github.com/OpenRailAssociation/github-org-manager/issues/260)) ([afeae65](https://github.com/OpenRailAssociation/github-org-manager/commit/afeae65cdcbeab2a9d1e1303ab7224b9583f61b2))
+* **deps:** update actions/create-github-app-token action to v3.3.0 ([#265](https://github.com/OpenRailAssociation/github-org-manager/issues/265)) ([97997b8](https://github.com/OpenRailAssociation/github-org-manager/commit/97997b86eca829a36f9568ee8d97bfd75933736d))
+* **deps:** update astral-sh/setup-uv action to v10.3.0 ([#262](https://github.com/OpenRailAssociation/github-org-manager/issues/262)) ([4c8614c](https://github.com/OpenRailAssociation/github-org-manager/commit/4c8614c3b9d223529c92fe4abc7ca1e8f1b62674))
+* **deps:** update dependency python to 3.15 ([#264](https://github.com/OpenRailAssociation/github-org-manager/issues/264)) ([ae1e0bb](https://github.com/OpenRailAssociation/github-org-manager/commit/ae1e0bb5b54fa2a62db0ed1b427c52e0d301f607))
+* **deps:** update dependency uv_build to &gt;=0.13.0,&lt;0.14.0 ([#263](https://github.com/OpenRailAssociation/github-org-manager/issues/263)) ([185a6ef](https://github.com/OpenRailAssociation/github-org-manager/commit/185a6ef3e906a78cab83996585f4af5bbf99135e))
+
 ## [0.7.14](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.13...v0.7.14) (2026-10-05)
 
 

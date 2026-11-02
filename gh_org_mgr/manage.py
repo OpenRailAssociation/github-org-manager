@@ -5,6 +5,7 @@
 """Manage a GitHub Organization, its teams, repository permissions, and more."""
 
 import argparse
+import contextlib
 import logging
 import sys
 
@@ -93,6 +94,9 @@ parser_create_team_file.add_argument(
 
 def main() -> None:
     """Main function."""
+    with contextlib.suppress(AttributeError):
+        sys.stdout.reconfigure(encoding="utf-8")  # ty: ignore[unresolved-attribute]
+
     # Process arguments
     args = parser.parse_args()
 
@@ -130,6 +134,10 @@ def main() -> None:
         # Get current rate limit
         org.ratelimit()
 
+        # Validate configured team roles before any changes are made
+        log_progress("Validating configured team roles...")
+        org.validate_configured_team_roles()
+
         # Synchronise organisation owners
         log_progress("Synchronising organisation owners...")
         org.sync_org_owners(dry=args.dry, force=args.force)
@@ -145,6 +153,9 @@ def main() -> None:
         # Synchronise the team memberships
         log_progress("Synchronising team memberships...")
         org.sync_teams_members(dry=args.dry)
+        # Synchronise the organisation roles of the teams
+        log_progress("Synchronising team organisation roles...")
+        org.sync_org_roles(dry=args.dry)
         # Report and act on teams that are not configured locally
         log_progress("Checking for unconfigured teams...")
         org.get_and_delete_unconfigured_teams(

@@ -25,6 +25,32 @@ def get_github_secrets_from_env(env_variable: str, secret: str | int) -> str:
     return str(secret)
 
 
+def run_rest_api_request(
+    method: str, url: str, token: str
+) -> tuple[HTTPStatus, dict | list | None]:
+    """Run a request against the GitHub REST API. Returns the HTTP status code
+    and the JSON body of the response, or None if there was no body (e.g. for
+    successful PUT/DELETE requests).
+    """
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    try:
+        request = requests.request(method=method, url=url, headers=headers, timeout=10)
+    except requests.exceptions.RequestException:
+        logging.exception("Request to the GitHub API failed")
+        sys.exit(1)
+
+    # Get JSON result. Note that some requests (e.g. successful PUT/DELETE) have no body
+    json_return: dict | list | None = None
+    with contextlib.suppress(requests.exceptions.JSONDecodeError):
+        json_return = request.json()
+
+    return HTTPStatus(request.status_code), json_return
+
+
 # Function to execute GraphQL query
 def run_graphql_query(query: str, variables: dict[str, Any], token: str) -> dict | str:
     """Run a query against the GitHub GraphQL API."""

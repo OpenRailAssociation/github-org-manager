@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.16](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.15...v0.7.16) (2026-11-02)
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#277](https://github.com/OpenRailAssociation/github-org-manager/issues/277)) ([ed71338](https://github.com/OpenRailAssociation/github-org-manager/commit/ed713382e381bccbda6d2a4bbbb24f2bdd14330e))
+* **deps:** update astral-sh/setup-uv action to v10.3.3 ([#275](https://github.com/OpenRailAssociation/github-org-manager/issues/275)) ([0a7f769](https://github.com/OpenRailAssociation/github-org-manager/commit/0a7f769ffe522e0d549fef1797c969d8ee7afb4e))
+
 ## [0.7.15](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.14...v0.7.15) (2026-10-26)
 
 

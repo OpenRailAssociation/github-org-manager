@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.16](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.15...v0.7.16) (2026-11-09)
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#277](https://github.com/OpenRailAssociation/github-org-manager/issues/277)) ([ed71338](https://github.com/OpenRailAssociation/github-org-manager/commit/ed713382e381bccbda6d2a4bbbb24f2bdd14330e))
+* **deps:** lock file maintenance ([#279](https://github.com/OpenRailAssociation/github-org-manager/issues/279)) ([960af5b](https://github.com/OpenRailAssociation/github-org-manager/commit/960af5b4475f503cbe36fbf90a8801f707ef79c6))
+* **deps:** update astral-sh/setup-uv action to v10.3.3 ([#275](https://github.com/OpenRailAssociation/github-org-manager/issues/275)) ([0a7f769](https://github.com/OpenRailAssociation/github-org-manager/commit/0a7f769ffe522e0d549fef1797c969d8ee7afb4e))
+* **deps:** update zizmorcore/zizmor-action action to v0.8.1 ([#278](https://github.com/OpenRailAssociation/github-org-manager/issues/278)) ([0f25c6d](https://github.com/OpenRailAssociation/github-org-manager/commit/0f25c6d9f66fb85938e9e888e80a8a28cdaa7843))
+
 ## [0.7.15](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.14...v0.7.15) (2026-10-26)
 
 

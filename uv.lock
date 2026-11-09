@@ -370,7 +370,7 @@ wheels = [
 
 [[package]]
 name = "github-org-manager"
-version = "0.7.15"
+version = "0.7.16"
 source = { editable = "." }
 default-groups = "all"
 dependencies = [

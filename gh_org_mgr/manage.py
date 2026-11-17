@@ -115,14 +115,14 @@ def main() -> None:
                 "No GitHub organisation name configured in organisation settings. Cannot continue"
             )
             sys.exit(1)
-        org.configured_org_owners = cfg_org.get("org_owners", [])  # ty:ignore[invalid-assignment]
+        org.configured_org_owners = cfg_org.get("org_owners", [])
         org.consolidate_team_config(
-            default_team_configs=cfg_org.get("defaults", {}).get("team", {})  # ty:ignore[invalid-argument-type, unresolved-attribute]
+            default_team_configs=cfg_org.get("defaults", {}).get("team", {})
         )
 
         # Login to GitHub with token, get GitHub organisation
         org.login(
-            orgname=cfg_org.get("org_name", ""),  # ty:ignore[invalid-argument-type]
+            orgname=cfg_org.get("org_name", ""),
             token=cfg_app.get("github_token", ""),
             app_id=cfg_app.get("github_app_id", ""),
             app_private_key=cfg_app.get("github_app_private_key", ""),
@@ -171,7 +171,7 @@ def main() -> None:
 
         # Print changes
         org.stats.print_changes(
-            orgname=cfg_org.get("org_name", ""),  # ty: ignore[invalid-argument-type]
+            orgname=cfg_org.get("org_name", ""),
             output=args.output,
             dry=args.dry,
         )

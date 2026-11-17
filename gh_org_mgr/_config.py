@@ -175,7 +175,7 @@ def _validate_config_schema(file: str, cfg: dict, schema: dict) -> None:
     logging.debug("Config in file %s validated successfully against schema.", file)
 
 
-def parse_config_files(path: str) -> tuple[dict[str, str | dict[str, str]], dict, dict]:
+def parse_config_files(path: str) -> tuple[dict[str, Any], dict, dict]:
     """Parse all relevant files in the configuration directory. Returns a tuple
     of org config, app config, and merged teams config.
     """

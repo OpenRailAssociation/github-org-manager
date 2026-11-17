@@ -46,7 +46,7 @@ class GHorg:
     org_members: list[NamedUser] = field(default_factory=list)
     current_teams: dict[Team, dict] = field(default_factory=dict)
     current_teams_str: list[str] = field(default_factory=list)
-    configured_teams: dict[str, dict | None] = field(default_factory=dict)
+    configured_teams: dict[str, dict] = field(default_factory=dict)
     newly_added_users: list[NamedUser] = field(default_factory=list)
     current_repos_teams: dict[Repository, dict[Team, str]] = field(default_factory=dict)
     graphql_repos_collaborators: dict[str, list[dict]] = field(default_factory=dict)
@@ -146,9 +146,9 @@ class GHorg:
     def consolidate_team_config(self, default_team_configs: dict[str, str]) -> None:
         """Complete teams configuration with default teams configs."""
         for team_name, team_config in self.configured_teams.items():
-            # Handle none team configs
+            # Handle none team configs (empty team in YAML) and keep the dict in place
             if team_config is None:
-                team_config = {}  # noqa: PLW2901
+                team_config = self.configured_teams[team_name] = {}  # noqa: PLW2901
 
             # Iterate through configurable team settings. Take team config, fall
             # back to default org-wide value. If no config can be found, either
@@ -304,7 +304,7 @@ class GHorg:
 
         # First, check whether all configured parent teams exist or will be created
         for team, attributes in self.configured_teams.items():
-            if parent := attributes.get("parent"):  # ty:ignore[unresolved-attribute]
+            if parent := attributes.get("parent"):
                 if parent not in self.configured_teams:
                     if parent not in self.current_teams_str:
                         logging.critical(
@@ -331,14 +331,14 @@ class GHorg:
                     )
 
         # Second, order the teams in a way that parent teams are created before child teams
-        ordered_teams: dict[str, dict | None] = {}
+        ordered_teams: dict[str, dict] = {}
         while len(ordered_teams) < len(self.configured_teams):
             for team, attributes in self.configured_teams.items():
                 # Team already ordered
                 if team in ordered_teams:
                     continue
                 # Team has parent, but parent not ordered yet
-                if (parent := attributes.get("parent")) and parent not in ordered_teams:  # ty:ignore[unresolved-attribute]
+                if (parent := attributes.get("parent")) and parent not in ordered_teams:
                     continue
                 # Team has no parent, or parent already ordered
                 ordered_teams[team] = attributes
@@ -350,7 +350,7 @@ class GHorg:
         for team, attributes in self.configured_teams.items():
             if team not in self.current_teams_str:
                 # If a parent team is configured, try to get its ID
-                if parent := attributes.get("parent"):  # ty:ignore[unresolved-attribute]
+                if parent := attributes.get("parent"):
                     try:
                         parent_id = self.org.get_team_by_slug(sluggify_teamname(parent)).id
                     except UnknownObjectException:
@@ -436,13 +436,13 @@ class GHorg:
             # Use dictionary comprehensions to build the dictionaries with the
             # relevant team settings for comparison
             configured_team_configs = {
-                key: self.configured_teams[team.name].get(key)  # ty:ignore[unresolved-attribute]
+                key: self.configured_teams[team.name].get(key)
                 for key in self.TEAM_CONFIG_FIELDS
                 # Only add keys that are actually in the configuration. Deals
                 # with settings that should be changed, as they are neither
                 # defined in the default or team config, and marked as
                 # <keep-current>
-                if key in self.configured_teams[team.name]  # ty:ignore[unsupported-operator]
+                if key in self.configured_teams[team.name]
             }
             current_team_configs = {
                 key: getattr(team, key)
@@ -450,7 +450,7 @@ class GHorg:
                 # Only compare current team settings with keys that are defined
                 # as the configured team settings. Taking out settings that
                 # shall not be changed
-                if key in self.configured_teams[team.name]  # ty:ignore[unsupported-operator]
+                if key in self.configured_teams[team.name]
             }
 
             # Resolve parent team id from parent Team object or team string, and sort
@@ -898,10 +898,10 @@ class GHorg:
                     # Abort handling the repo sync as we don't touch unconfigured teams
                     continue
                 # Handle: Team is configured, but contains no config
-                if self.configured_teams[team.name] is None:
+                if not self.configured_teams[team.name]:
                     remove = True
                 # Handle: Team is configured, contains config
-                elif repos := self.configured_teams[team.name].get("repos", []):  # ty:ignore[unresolved-attribute]
+                elif repos := self.configured_teams[team.name].get("repos", []):
                     # If this repo has not been found in the configured repos
                     # for the team, remove all permissions
                     if repo.name not in repos:
@@ -920,7 +920,7 @@ class GHorg:
     # --------------------------------------------------------------------------
     # Collaborators
     # --------------------------------------------------------------------------
-    def _aggregate_lists(self, *lists: list[str | int] | None) -> list[str | int]:
+    def _aggregate_lists(self, *lists: list[str] | None) -> list[str]:
         """Combine multiple lists into one while removing duplicates."""
         complete = []
         for single_list in lists:
@@ -993,7 +993,7 @@ class GHorg:
         """
         for team_name, team_attrs in self.configured_teams.items():
             logging.debug("Getting configured repository permissions for team %s", team_name)
-            repo_perms = self._get_all_repo_permissions_for_team_and_parents(team_name, team_attrs)  # ty:ignore[invalid-argument-type]
+            repo_perms = self._get_all_repo_permissions_for_team_and_parents(team_name, team_attrs)
             for repo, perm in repo_perms.items():
                 # Create repo if non-exist
                 if repo not in self.configured_repos_collaborators:
@@ -1001,14 +1001,14 @@ class GHorg:
 
                 # Get team maintainers and members
                 team_members = self._aggregate_lists(
-                    team_attrs.get("maintainer", []),  # ty: ignore[unresolved-attribute]
-                    team_attrs.get("member", []),  # ty: ignore[unresolved-attribute]
+                    team_attrs.get("maintainer", []),
+                    team_attrs.get("member", []),
                 )
 
                 # Add team member to repo with their repo permissions
                 for team_member in team_members:
                     # Lower-case team member
-                    member_lower = team_member.lower()  # ty:ignore[unresolved-attribute]
+                    member_lower = team_member.lower()
                     # Check if permissions already exist
                     if self.configured_repos_collaborators[repo].get(member_lower, {}):
                         logging.debug(

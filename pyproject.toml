@@ -7,7 +7,7 @@ name = "github-org-manager"
 version = "0.7.15"
 description = "Manage a GitHub Organization, its teams, repository permissions, and more"
 authors = [{ name = "Max Mehl", email = "max.mehl@deutschebahn.com" }]
-requires-python = ">=3.10,<4"
+requires-python = ">=3.11,<4"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "LICENSES/*"]
@@ -25,11 +25,11 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
 dependencies = [
     "pygithub>=2.8.1,<3",

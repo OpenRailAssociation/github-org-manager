@@ -36,7 +36,7 @@ Are you missing a feature? Please check whether it's [already posted as an issue
 
 ## Install
 
-Dependencies: Python 3.10 or newer
+Dependencies: Python 3.11 or newer
 
 To install: `pip3 install github-org-manager`
 

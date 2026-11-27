@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.8.0](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.15...v0.8.0) (2026-11-27)
+
+
+### 🚀 New Features
+
+* drop support for Python 3.10, add Python 3.15 ([#281](https://github.com/OpenRailAssociation/github-org-manager/issues/281)) ([0e0dd03](https://github.com/OpenRailAssociation/github-org-manager/commit/0e0dd0322c22bc91c66c0c564fcf8cea1f2ba23f))
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#277](https://github.com/OpenRailAssociation/github-org-manager/issues/277)) ([ed71338](https://github.com/OpenRailAssociation/github-org-manager/commit/ed713382e381bccbda6d2a4bbbb24f2bdd14330e))
+* **deps:** lock file maintenance ([#279](https://github.com/OpenRailAssociation/github-org-manager/issues/279)) ([960af5b](https://github.com/OpenRailAssociation/github-org-manager/commit/960af5b4475f503cbe36fbf90a8801f707ef79c6))
+* **deps:** lock file maintenance ([#280](https://github.com/OpenRailAssociation/github-org-manager/issues/280)) ([76f15fa](https://github.com/OpenRailAssociation/github-org-manager/commit/76f15fab2fcd4025ccac85a58b78eb37f86d2684))
+* **deps:** lock file maintenance ([#283](https://github.com/OpenRailAssociation/github-org-manager/issues/283)) ([e22fc32](https://github.com/OpenRailAssociation/github-org-manager/commit/e22fc321377797d91499ccbdf3ab6cc8b3c4aa83))
+* **deps:** update actions/create-github-app-token action to v3.4.0 ([#282](https://github.com/OpenRailAssociation/github-org-manager/issues/282)) ([bfcb2bb](https://github.com/OpenRailAssociation/github-org-manager/commit/bfcb2bb9c39eb6b3ced6ed6134a10cdb00758883))
+* **deps:** update astral-sh/setup-uv action to v10.3.3 ([#275](https://github.com/OpenRailAssociation/github-org-manager/issues/275)) ([0a7f769](https://github.com/OpenRailAssociation/github-org-manager/commit/0a7f769ffe522e0d549fef1797c969d8ee7afb4e))
+* **deps:** update astral-sh/setup-uv action to v10.4.0 ([#284](https://github.com/OpenRailAssociation/github-org-manager/issues/284)) ([deafdf6](https://github.com/OpenRailAssociation/github-org-manager/commit/deafdf624973501f8150a6880c1017e634e2a4da))
+* **deps:** update zizmorcore/zizmor-action action to v0.8.1 ([#278](https://github.com/OpenRailAssociation/github-org-manager/issues/278)) ([0f25c6d](https://github.com/OpenRailAssociation/github-org-manager/commit/0f25c6d9f66fb85938e9e888e80a8a28cdaa7843))
+* **deps:** update zizmorcore/zizmor-action action to v0.9.1 ([#285](https://github.com/OpenRailAssociation/github-org-manager/issues/285)) ([282a559](https://github.com/OpenRailAssociation/github-org-manager/commit/282a55905edc46335574fa6a656059136dc5723f))
+* **deps:** update zizmorcore/zizmor-action action to v0.9.2 ([#286](https://github.com/OpenRailAssociation/github-org-manager/issues/286)) ([acc0dbe](https://github.com/OpenRailAssociation/github-org-manager/commit/acc0dbeaf7ea02b45d8bb170dc2ed4e9c8827ec6))
+
 ## [0.7.15](https://github.com/OpenRailAssociation/github-org-manager/compare/v0.7.14...v0.7.15) (2026-10-26)
 
 
